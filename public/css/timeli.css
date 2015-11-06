@@ -5,3 +5,15 @@ body {
   padding: 40px 15px;
   text-align: center;
 }
+hr {
+  border: none;
+  height: 1px;
+  color: black; /* old IE */
+  background-color:black; /* Modern Browsers */
+}
+
+.console {
+  border:1px solid black;
+  height:200px;
+  overflow-y: auto;
+}
