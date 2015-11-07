@@ -17,3 +17,31 @@ hr {
   height:200px;
   overflow-y: auto;
 }
+
+.control {
+  margin:20px;
+}
+
+.resources,.methods {
+  width:150px;
+}
+
+.params label {
+  /*display:block;*/
+  /*clear:both;*/
+  width:100px;
+}
+
+.centered {
+  margin: auto;
+  width: 400px;
+  /*height: 200px;*/
+}
+
+.go-button {
+  width:100px;
+  margin:20px;
+}
+.go-box {
+  display:none;
+}

@@ -52,11 +52,27 @@
       <div class="starter-template">
         <h1>Timeli SDK API Test Harness</h1>
         <!--<p class="lead">coming soon to a screen near you</p>-->
-        <button id="sdk-authenticate">Authenticate</button>
+        <!--<button id="sdk-authenticate">Authenticate</button>
         <button id="sdk-asset">List Assets</button>
-        <!--<button id="test-log">Click Me to Log Message</button>-->
-        <hr>
-        <div id="log" class="console"><p align="left"></p></div>
+        <button id="test-log">Test</button>-->
+         <div class="control">
+          <label>Select Resource</label>
+          <select class="resources">
+            <option value="0">Select Resource</option>
+          </select>
+          <label>Select Method</label>
+          <select class="methods">
+            <option value="0">Select Method</option>
+          </select>
+          <!--<label for="command">Execute:</label>
+          <input type="text" name="command" value="">-->
+         </div>
+          <div class="go-box">
+            <div class="params centered"></div>
+            <button class="go-button">Go</button>
+          </div>
+          <div id="busy" style="display:none"><img src="/images/loading.gif"></div>
+          <div id="log" class="console"><p align="left"></p></div>
       </div>
 
     </div><!-- /.container -->
@@ -67,7 +83,8 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
-    <script src="http://demo.timeli.io/static/js/public/sdk.js"></script>
+    <!--<script src="http://demo.timeli.io/static/js/public/sdk.js"></script>-->
+    <script src="/js/sdk.js"></script>
     <script src="/js/promptli.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="/js/ie10-viewport-bug-workaround.js"></script>
