@@ -7,6 +7,21 @@ var bodyParser = require('body-parser');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
+var log4js = require('log4js');
+log4js.configure({
+  appenders: [
+    {
+      type: "file",
+      filename: "promptli.log",
+      maxLogSize: 50*1024,
+      backups: 1,
+      category: ['INDEX']
+    },
+    {
+      type: "console"
+    }],
+  replaceConsole: true
+});
 
 var app = express();
 

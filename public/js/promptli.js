@@ -6,18 +6,22 @@ var timeli_initialized = false;
 $(document).ready(function() {
 
     $.post("/login", function (data, status) {
-        if (data && data.access_token) {
-            APP.SDK.init($, {
-                    domain: "hari.timeli.io",
-                    port: 443,
-                    https: true,
-                    client_token: data.access_token
-                },
-                function () {
-                    timeli_initialized = true;
-                    logMsg("Initialization Completed!");
-                });
-
+        if (data) {
+            if (data.access_token) {
+                APP.SDK.init($, {
+                        domain: "hari.timeli.io",
+                        port: 443,
+                        https: true,
+                        client_token: data.access_token
+                    },
+                    function () {
+                        timeli_initialized = true;
+                        logMsg("Initialization Completed!");
+                    });
+            }
+            else {
+                logMsg("Initializaton failed: "+data.message);
+            }
         }
     }, "json")
         .fail(function (jqXHR, status, error) {

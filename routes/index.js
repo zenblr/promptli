@@ -1,5 +1,8 @@
 var express = require('express');
 var router = express.Router();
+var log4js = require('log4js');
+var logger = log4js.getLogger("INDEX");
+logger.setLevel("DEBUG");
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -8,14 +11,14 @@ router.get('/', function(req, res, next) {
 
 router.post('/:ask', function(req, res, next) {
   switch(req.params.ask) {
-    case 'login':
+      case 'login':
         res.setHeader('Content-Type', 'application/json');
         authenticateClient(function(repl) {
             res.send(repl);
             res.end();
         });
         break;
-    default:
+      default:
         if (next) {
             var err = new Error('Not Found');
             err.status = 404;
@@ -30,7 +33,7 @@ module.exports = router;
 // Private methods below this point
 
 function authenticateClient(cb) {
-    var domain       = "hari.timeli.io",
+    var domain       = "mateo.timeli.io",
         port         = 443,
         client       = "f5195bd0-6b31-4212-8f82-9cc1ff7edc66",
         secret       = "Secret for Hari",
@@ -68,6 +71,10 @@ function authenticateClient(cb) {
                 });
                 res.on('end', function () {
                     cb(repl);
+                });
+                res.on('error', function (e) {
+                    logger.error(e);
+                    cb(e);
                 });
               });
 
