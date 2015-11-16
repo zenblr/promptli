@@ -38,15 +38,18 @@ hr {
 
 .centered {
   margin: auto;
+  width:300px;
   /*width: 400px;*/
   /*height: 200px;*/
 }
 
-.go-button {
+.show-button {
+  //display:block;
   width:100px;
-  margin:20px;
+  //margin:20px;
+  margin:auto;
 }
-.go-box {
+.show-box {
   display:none;
   border:1px solid black;
   margin-bottom: 20px;
@@ -54,4 +57,9 @@ hr {
   margin-right: auto;
   margin-top: 20px;
   width:50%;
+}
+.code-input-box {
+  border:1px solid black;
+  height:50px;
+  overflow-y: auto;
 }

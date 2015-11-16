@@ -9,7 +9,7 @@ $(document).ready(function() {
         if (data) {
             if (data.access_token) {
                 APP.SDK.init($, {
-                        domain: "hari.timeli.io",
+                        domain: "volume.timeli.io",
                         port: 443,
                         https: true,
                         client_token: data.access_token
@@ -75,12 +75,71 @@ $(document).ready(function() {
                 $('.params').append($('<br>'));
             }
             //$('.params').append($('<button class="go-button">Go</button>'));
+            $('.code-box').hide();
             $('.go-box').show();
         }
     });
 
-    $('.go-button').click(function() {
+    $('.code-button').click(function() {
         $('.go-box').hide();
+        $('.code-box').show();
+    });
+
+    $('.clear-button').click(function() {
+        $('textarea[name=code]').val('');
+    });
+
+    $('.close-button').click(function() {
+        $('.code-box, .go-box').hide();
+    });
+
+    $('.save-button').click(function() {
+        var ele = $('div.save').clone();
+        ele.find('.popupsave').click(function() {
+            var name = ele.find('input[name=name]').val();
+            var content = $('textarea[name=code]').val();
+            $.post("/save", {name:name, content:content}, function(resp) {
+                if (resp.status == "success") {
+                    ele.find('input').remove();
+                    ele.find('.popupsave').remove();
+                    ele.append("<p>Your test script has been saved as: '"+name+"'");
+                    logMsg("Test script saved as: '"+name+"'");
+                }
+            }, "json");
+        })
+        showPopup(ele);
+    });
+
+    $('.get-button').click(function() {
+        var ele = $('div.get').clone();
+        ele.find('.popupget').click(function() {
+            var name = ele.find('input[name=name]').val();
+            $.get("/get", {name:name}, function(resp) {
+                if (resp.status == "success") {
+                    $('textarea[name=code]').val(resp.content);
+                    ele.find('input').remove();
+                    ele.find('.popupget').remove();
+                    ele.append("<p>Your test script '"+name+"' has been fetched.");
+                    logMsg("Test script '"+name+"' loaded.");
+                }
+            }, "json");
+        })
+        showPopup(ele);
+    });
+
+    $('.run-button').click(function() {
+        var text = $('textarea[name=code]').val();
+        try {
+            runCode(text);
+            //eval(text);
+        }
+        catch (e) {
+            logMsg("[Error] "+ e.message);
+        }
+    });
+
+    $('.go-button').click(function() {
+        $('.show-box').hide();
         var vals = [];
         $('.go-box input').each(function() {
             var val = $(this).val().trim();
@@ -90,7 +149,7 @@ $(document).ready(function() {
         });
         var resource = $('.resources').val();
         var method = $('.methods').val();
-        vals.push(cb);
+        vals.push(generalcb);
         APP.SDK[resource][method].apply(this, vals);
     });
 
@@ -205,7 +264,7 @@ function getFunctionArguments(f) {
     return [];
 }
 
-function cb(e, r) {
+function generalcb(e, r) {
     if (e == null) {
         logPara();
         logMsg(JSON.stringify(r));
@@ -215,6 +274,8 @@ function cb(e, r) {
     }
 }
 
+
+
 $(document).ajaxStart(function () {
     $('#busy').show();
 });
@@ -222,5 +283,124 @@ $(document).ajaxStart(function () {
 $(document).ajaxStop(function () {
     $('#busy').hide();
 });
+
+function runCode(code) {
+    var lines = code.split('\n');
+    var lineno = 0;
+    var errormsg = '';
+    var nVar = {};
+
+    lines.forEach(function(line, index, array) {
+        lineno++;
+        var z = line.split(/=(.+)?/);
+        if (z.length ==1) { // no assignment
+            executeStatement(z[0], false, function(ret) {
+                logPara();
+                if (!ret.run) {
+                    logMsg('[Error] in line no: ['+lineno+'] - '+ret.msg);
+                }
+                else {
+                    logMsg('> ' + ret.msg);
+                }
+            });
+        }
+        else if (z.length == 3) { // with assignment
+            executeStatement(z[1], true, function(ret) {
+                logPara();
+                if (!ret.run) {
+                    logMsg('[Error] in line no: ['+lineno+'] - '+ret.msg);
+                }
+                else {
+                    logMsg('> ' + ret.msg);
+                }
+                nVar[z[0].trim()] = ret;
+                logMsg(JSON.stringify(nVar[z[0].trim()]));
+            });
+        }
+        else { // not sure what this can be
+            logMsg('[Error] in line no: ['+lineno+'] - cannot parse statement.');
+        }
+    });
+}
+
+
+
+function executeStatement(code, ret, cb) {
+
+    var p = code.trim().match(/^(.*)\((.*)\)/);
+    if ((p == null) || (p.length != 3)) {
+        cb({run:false, msg: "syntax error"});
+        return;
+    }
+    var errormsg = '';
+
+    // get resource and method
+    var q = p[1].trim().split(' ');
+    if (q.length != 2) {
+        errormsg = 'either resource or method is not specified.';
+        cb({run:false, msg: errormsg});
+        return;
+    }
+
+    var resource = q[0].trim();
+    var method = q[1].trim();
+
+    if (typeof(APP.SDK[resource]) != 'object') {
+        errormsg = 'resource type "'+resource+'" is not known.';
+        cb({run:false, msg: errormsg});
+        return;
+    }
+
+    if (typeof(APP.SDK[resource][method]) != 'function') {
+        errormsg = 'method "'+method+'" does not exist for resource "'+resource+'"';
+        cb({run:false, msg: errormsg});
+        return;
+    }
+
+    var args = null;
+
+    try {
+        args = eval('[' + p[2].trim() + ']');
+    }
+    catch(err) {
+        errormsg = 'error parsing arguments for method "'+method+'" of resource "'+resource+'"';
+        cb({run:false, msg: errormsg});
+    }
+    var statement = resource + ' ' + method + ' ' + '('+p[2].trim()+')';
+    if (!ret) {
+        args.push(generalcb);
+    }
+    else {
+        args.push(function(e, r) {
+            if (e == null) {
+                cb({run:true, msg:statement, value:r});
+            }
+            else {
+                cb({run:false, msg:e, value:null});
+            }
+        });
+    }
+    APP.SDK[resource][method].apply(this, args);
+    if (!ret) {
+        cb({run: true, msg: statement});
+    }
+
+}
+
+function showPopup(ele) {
+    if (!ele) {
+        return;
+    }
+
+    ele.find('.xbutton').click(function() {
+        $.colorbox.close();
+    });
+
+    $.colorbox({
+        html: ele,
+        width: 500,
+        height: 200
+    });
+}
 
 
