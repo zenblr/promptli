@@ -3,6 +3,7 @@
  */
 //var access_token = null;
 var timeli_initialized = false;
+var g = {};
 $(document).ready(function() {
 
     $.post("/login", function (data, status) {
@@ -128,13 +129,25 @@ $(document).ready(function() {
     });
 
     $('.run-button').click(function() {
-        var text = $('textarea[name=code]').val();
+        var text = $('textarea[name=code]').val().trim();
+        var cmds = [];
         try {
-            runCode(text);
-            //eval(text);
+            cmds = eval('[' + text + ']');
         }
-        catch (e) {
-            logMsg("[Error] "+ e.message);
+        catch (error) {
+            logError("[Error] "+error.message);
+            return;
+        }
+        cmds.reverse();
+        if (cmds.length > 0) {
+            runScript(cmds, null, 1, function (r) {
+                if (r.error) {
+                    logError(r.error);
+                }
+                else {
+                    logMsg(typeof(r.val) != 'undefined' ? JSON.stringify(r.val) : "No return value");
+                }
+            });
         }
     });
 
@@ -151,6 +164,10 @@ $(document).ready(function() {
         var method = $('.methods').val();
         vals.push(generalcb);
         APP.SDK[resource][method].apply(this, vals);
+    });
+
+    $('.clear-transcript').click(function() {
+        $('#log').empty().append('<p align="left"></p>');
     });
 
     $("#sdk-authenticate").click(function() {
@@ -244,6 +261,11 @@ function logMsg(str) {
     scroll();
 }
 
+function logError(str) {
+    $("#log").append('<p align="left" style="color:red">'+str+'</p><br>');
+    logPara();
+}
+
 function logPara() {
     $("#log").append('<p align="left"></p>');
 }
@@ -284,6 +306,7 @@ $(document).ajaxStop(function () {
     $('#busy').hide();
 });
 
+/*
 function runCode(code) {
     var lines = code.split('\n');
     var lineno = 0;
@@ -322,10 +345,11 @@ function runCode(code) {
         }
     });
 }
+*/
 
 
 
-function executeStatement(code, ret, cb) {
+/*function executeStatement(code, ret, cb) {
 
     var p = code.trim().match(/^(.*)\((.*)\)/);
     if ((p == null) || (p.length != 3)) {
@@ -385,7 +409,7 @@ function executeStatement(code, ret, cb) {
         cb({run: true, msg: statement});
     }
 
-}
+}*/
 
 function showPopup(ele) {
     if (!ele) {
@@ -403,4 +427,84 @@ function showPopup(ele) {
     });
 }
 
+function run(code, cb) {
 
+    var p =  new Promise(
+
+        function(resolve, reject) {
+
+            var regex = /([^\.]+)\.([^\(]+)\((.*)\)/;
+            var r = code.trim().match(regex);
+            if (r == null) {
+                reject(new Error("cannot parse statement"));
+            }
+
+            var resource = r[1].trim();
+            var method = r[2].trim();
+            var strargs = r[3].trim();
+
+            if (typeof(APP.SDK[resource]) != 'object') {
+                reject(new Error('resource type "' + resource + '" is not known.'));
+            }
+
+            if (typeof(APP.SDK[resource][method]) != 'function') {
+                reject(new Error('method "' + method + '" does not exist for resource "' + resource + '"'));
+            }
+
+            try {
+                args = eval('[' + strargs + ']');
+            }
+            catch (err) {
+                reject(new Error('failed to parse arguments for method "' + method + '" of resource "' + resource + '"'));
+            }
+
+            var statement = resource + ' ' + method + ' ' + '(' + strargs + ')';
+
+            args.push(function (e, r) {
+                if (e == null) {
+                    resolve(r);
+                }
+                else {
+                    reject(new Error(e));
+                }
+            });
+
+            APP.SDK[resource][method].apply(this, args);
+        }
+    );
+
+    p.then(function(val) {
+        cb({result:val});
+    }, function(error) {
+        cb({error:error});
+    });
+}
+
+function runScript(script, r, line, cb) {
+    var s = null;
+    if (script.length > 0) {
+        s = script.pop();
+    }
+    if (s == null) {
+        cb({val:r});
+        return;
+    }
+    if (typeof(s) == 'string') {
+        run(s, function(r) {
+            if (r.error) {
+               cb({error:'line number: '+line+': '+r.error.message});
+                return;
+            }
+            runScript(script, r.result, ++line, cb);
+            return;
+        });
+    }
+    else if (typeof(s) == 'function') {
+        var ret = s(r);
+        runScript(script, ret, ++line, cb);
+        return;
+    }
+    else {
+        cb({error:'line number: '+line+': cannot parse'});
+    }
+}
