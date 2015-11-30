@@ -72,7 +72,8 @@ module.exports = router;
 // Private methods below this point
 
 function authenticateClient(cb) {
-    var domain       = "volume.timeli.io",
+    var //domain       = "volume.timeli-staging.com",
+        domain       = "volume.timeli.io",
         port         = 443,
         //client       = "f5195bd0-6b31-4212-8f82-9cc1ff7edc66",
         client       = "e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
@@ -80,6 +81,7 @@ function authenticateClient(cb) {
         secret       = "volume1secret",
         redirect_uri = "http://fiddle.jshell.net",
         scopes       = "Administrator";
+        //scopes       = "administer";
 
     var querystring = require('querystring'),
         https       = require('https');

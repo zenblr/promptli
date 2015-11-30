@@ -29,7 +29,7 @@ hr {
 .params label {
   /*display:block;*/
   /*clear:both;*/
-  width:100px;
+  width:150px;
 }
 
 .params {
@@ -38,7 +38,7 @@ hr {
 
 .centered {
   margin: auto;
-  width:300px;
+  width:400px;
   /*width: 400px;*/
   /*height: 200px;*/
 }

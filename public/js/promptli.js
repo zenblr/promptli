@@ -11,6 +11,7 @@ $(document).ready(function() {
             if (data.access_token) {
                 APP.SDK.init($, {
                         domain: "volume.timeli.io",
+                        //domain: "volume.timeli-staging.com",
                         port: 443,
                         https: true,
                         client_token: data.access_token
@@ -29,16 +30,39 @@ $(document).ready(function() {
             alert("Initialization failed! "+error);
         });
 
-    for (var name in APP.SDK) {
+    var z = getResources(APP.SDK);
+    z.forEach(function(v){
+        $('.resources').append($('<option>', {
+            value: v,
+            text: v
+        }));
+    });
+    /*for (var name in APP.SDK) {
         if (APP.SDK.hasOwnProperty(name) && (typeof(APP.SDK[name]) != "function")) {
             $('.resources').append($('<option>', {
                 value: name,
                 text: name
             }));
         }
-    }
-
+    }*/
     $('.resources').change(function() {
+        $(".methods").empty();
+        $('.methods').append($('<option>', {
+            value: '0',
+            text: 'Select Method'
+        }));
+        var res = getSelectedResource($(this).val());
+        for (var n in res) {
+            if ((res.hasOwnProperty(n)) &&  (typeof(res[n]) == "function")) {
+                $('.methods').append($('<option>', {
+                    value: n,
+                    text: n
+                }));
+            };
+        }
+    });
+
+    /*$('.resources').change(function() {
         $(".methods").empty();
         $('.methods').append($('<option>', {
             value: '0',
@@ -54,8 +78,34 @@ $(document).ready(function() {
             };
          }
     });
-
+*/
     $('.methods').change(function() {
+        var method = $(this).val();
+        if (method == '0') {
+            return;
+        }
+        var resource = $('.resources').val();
+        var res = getSelectedResource(resource);
+        var args = getFunctionArguments(res[method]);
+        if (args.length > 0) {
+            $('.params').empty();
+            var prefix = resource + '_' + method + '_';
+            for (var i = 0; i < args.length; i++) {
+                if (args[i] == 'cb') {
+                    continue;
+                }
+                var name = prefix + args[i];
+                $('.params').append($('<label for="' + name + '">' + args[i] + '</label>'));
+                $('.params').append($('<input type="text" value="" name="' + name + '">'));
+                $('.params').append($('<br>'));
+            }
+            //$('.params').append($('<button class="go-button">Go</button>'));
+            $('.code-box').hide();
+            $('.go-box').show();
+        }
+    });
+
+    /*$('.methods').change(function() {
         var method = $(this).val();
         var resource = $('.resources').val();
         if (method == '0') {
@@ -70,7 +120,7 @@ $(document).ready(function() {
                     continue;
                 }
                 var name = prefix+args[i];
-                /*$('.params').append($('<label>'+args[i]+':  <input type="text" value="" name="'+name+'"></label>'));*/
+                /!*$('.params').append($('<label>'+args[i]+':  <input type="text" value="" name="'+name+'"></label>'));*!/
                 $('.params').append($('<label for="'+name+'">'+args[i]+'</label>'));
                 $('.params').append($('<input type="text" value="" name="'+name+'">'));
                 $('.params').append($('<br>'));
@@ -79,7 +129,7 @@ $(document).ready(function() {
             $('.code-box').hide();
             $('.go-box').show();
         }
-    });
+    });*/
 
     $('.code-button').click(function() {
         $('.go-box').hide();
@@ -160,10 +210,10 @@ $(document).ready(function() {
                 vals.push((val.charAt(0) == '{' ? JSON.parse(val) : val));
             }
         });
-        var resource = $('.resources').val();
+        var resource = getSelectedResource($('.resources').val());
         var method = $('.methods').val();
         vals.push(generalcb);
-        APP.SDK[resource][method].apply(this, vals);
+        resource[method].apply(resource, vals);
     });
 
     $('.clear-transcript').click(function() {
@@ -255,6 +305,16 @@ $(document).ready(function() {
     });
 
 });
+
+function getSelectedResource(resource) {
+    var name = "APP.SDK";
+    var objs = resource.split('.');
+    for (var i = 0; i < objs.length; i++) {
+        name += '["' + objs[i] + '"]';
+    }
+    return eval(name);
+}
+
 
 function logMsg(str) {
     $("#log p:last-child").html($("#log p:last-child").html()+str+"<br>");
@@ -507,4 +567,18 @@ function runScript(script, r, line, cb) {
     else {
         cb({error:'line number: '+line+': cannot parse'});
     }
+}
+
+function getResources(o) {
+    var res = [];
+    for (var name in o) {
+        if (o.hasOwnProperty(name) && (typeof(o[name]) == "object")) {
+            res.push(name);
+            var r = getResources(o[name]);
+            r.forEach(function(v) {
+                res.push(name+'.'+v);
+            });
+        }
+    }
+    return res;
 }
