@@ -514,43 +514,63 @@ function run(sdk, code, cb) {
 
         function(resolve, reject) {
 
-            var regex = /([^\.]+)\.([^\(]+)\((.*)\)/;
-            var r = code.trim().match(regex);
-            if (r == null) {
+            var strargs  = '',
+                resource = sdk,
+                method   = '';
+
+            var resource_name = '';
+
+            var z = code.match(/\((.*)\)/);
+
+            if (z != null) {
+                strargs  = z[1];
+            }
+
+            code = code.replace(/\(.*\)/, '');
+
+            z = code.match(/(\w+)/g);
+
+            if (z != null) {
+                for (var i=0; i<z.length -1; i++) {
+                    resource = resource[z[i]];
+                    resource_name += z[i] + '.';
+                }
+                resource_name.replace(/\.$/,'');
+                method  = z[z.length-1];
+            }
+            else {
                 reject(new Error("cannot parse statement"));
             }
 
-            var resource = r[1].trim();
-            var method = r[2].trim();
-            var strargs = r[3].trim();
-
-            if (typeof(sdk[resource]) != 'object') {
-                reject(new Error('resource type "' + resource + '" is not known.'));
+            if (typeof(resource) != 'object') {
+                reject(new Error('unrecognized resource type "' + resource_name + '"'));
             }
 
-            if (typeof(sdk[resource][method]) != 'function') {
-                reject(new Error('method "' + method + '" does not exist for resource "' + resource + '"'));
+            if (typeof(resource[method]) != 'function') {
+                reject(new Error('method "' + method + '" does not exist for resource "' + resource_name + '"'));
             }
+
+            var args = [];
 
             try {
                 args = eval('[' + strargs + ']');
             }
             catch (err) {
-                reject(new Error('failed to parse arguments for method "' + method + '" of resource "' + resource + '"'));
+                reject(new Error('failed to parse arguments for method "' + method + '" of resource "' + resource_name + '"'));
             }
 
-            var statement = resource + ' ' + method + ' ' + '(' + strargs + ')';
+            var statement = resource_name + ' ' + method + ' ' + '(' + strargs + ')';
 
             args.push(function (e, r) {
                 if (e == null) {
                     resolve(r);
                 }
                 else {
-                    reject(new Error(e));
+                    reject(new Error(JSON.stringify(e)));
                 }
             });
 
-            sdk[resource][method].apply(this, args);
+            resource[method].apply(this, args);
         }
     );
 
