@@ -13,14 +13,14 @@ router.get('/', function(req, res, next) {
 router.post('/:ask', function(req, res, next) {
   switch(req.params.ask) {
       case 'login':
+        var version = req.body.version;
         res.setHeader('Content-Type', 'application/json');
-        authenticateClient(function(repl) {
+        authenticateClient(version, function(repl) {
             res.send(repl);
             res.end();
         });
         break;
       case 'save':
-          console.log('>>> reached the code!');
           res.setHeader('Content-Type', 'application/json');
           var name = req.body.name;
           var content = req.body.content;
@@ -71,17 +71,29 @@ module.exports = router;
 
 // Private methods below this point
 
-function authenticateClient(cb) {
-    var //domain       = "volume.timeli-staging.com",
-        domain       = "volume.timeli.io",
+var creds = {'v1':{
+                    'domain':"volume.timeli.io",
+                    'client':"e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
+                    'secret':"volume1secret",
+                    'redirect_uri':"http://fiddle.jshell.net",
+                    'scopes':"Administrator"
+                  },
+             'v2':{
+                    'domain':"volume.timeli-staging.com",
+                    'client':"e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
+                    'secret':"volume1secret",
+                    'redirect_uri':"http://fiddle.jshell.net",
+                    'scopes':"administer"
+                  }
+            };
+
+function authenticateClient(version, cb) {
+    var domain       = creds[version]['domain'],
         port         = 443,
-        //client       = "f5195bd0-6b31-4212-8f82-9cc1ff7edc66",
-        client       = "e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
-        //secret       = "Secret for Mateo",
-        secret       = "volume1secret",
-        redirect_uri = "http://fiddle.jshell.net",
-        scopes       = "Administrator";
-        //scopes       = "administer";
+        client       = creds[version]['client'],
+        secret       = creds[version]['secret'],
+        redirect_uri = creds[version]['redirect_uri'],
+        scopes       = creds[version]['scopes'];
 
     var querystring = require('querystring'),
         https       = require('https');

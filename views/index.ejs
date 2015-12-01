@@ -57,6 +57,12 @@
         <button id="sdk-asset">List Assets</button>
         <button id="test-log">Test</button>-->
          <div class="control">
+         <label>Select Version</label>
+         <select class="version">
+             <option value="0">None</option>
+             <option value="v1">Version 1</option>
+             <option value="v2">Version 2</option>
+         </select>
           <label>Select Resource</label>
           <select class="resources">
             <option value="0">Select Resource</option>
@@ -106,6 +112,11 @@
             <button class="popupget">Get</button>
             <button class="xbutton">Close</button>
         </div>
+        <div class="version-reset-warn">
+            <p></p>
+            <button class="popupOK">OK</button>
+            <button class="xbutton">Cancel</button>
+        </div>
     </div>
 
 
@@ -116,9 +127,17 @@
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/jquery.colorbox-min.js"></script>
     <!--<script src="http://demo.timeli.io/static/js/public/sdk.js"></script>-->
-    <script src="/js/sdk.js"></script>
+    <!--<script src="/js/sdk.js"></script>-->
     <script src="/js/promptli.js"></script>
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <script src="/js/ie10-viewport-bug-workaround.js"></script>
+    <script src="/js/sdkv2.js"></script>
+    <script>
+        APP.SDK.cloneInto(sdk['v2'].sdk);
+    </script>
+    <script src="/js/sdkv1.js"></script>
+    <script>
+        APP.SDK.cloneInto(sdk['v1'].sdk);
+    </script>
   </body>
 </html>

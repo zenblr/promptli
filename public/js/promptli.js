@@ -1,34 +1,16 @@
 /**
  * Test Harness Javascript.
  */
-//var access_token = null;
-var timeli_initialized = false;
-var g = {};
-$(document).ready(function() {
 
-    $.post("/login", function (data, status) {
-        if (data) {
-            if (data.access_token) {
-                APP.SDK.init($, {
-                        domain: "volume.timeli.io",
-                        //domain: "volume.timeli-staging.com",
-                        port: 443,
-                        https: true,
-                        client_token: data.access_token
-                    },
-                    function () {
-                        timeli_initialized = true;
-                        logMsg("Initialization Completed!");
-                    });
-            }
-            else {
-                logMsg("Initializaton failed: "+data.message);
-            }
-        }
-    }, "json")
-        .fail(function (jqXHR, status, error) {
-            alert("Initialization failed! "+error);
-        });
+var sdk = {
+    'v1':{'domain':'volume.timeli.io', sdk:{}},
+    'v2':{'domain':'volume.timeli-staging.com', sdk:{}}
+}
+
+var g = {};
+var current_version = null;
+
+$(document).ready(function() {
 
     var z = getResources(APP.SDK);
     z.forEach(function(v){
@@ -45,6 +27,39 @@ $(document).ready(function() {
             }));
         }
     }*/
+    $('.version').change(function() {
+        var v = $(this).val();
+        if (current_version != v) {
+            login(v);
+        }
+
+        /*if (eval(v+'_initialized')) {
+            return;
+        }*/
+        //var active = [];
+        /*$('.version option').each(function() {
+            var nv = $(this).val();
+            if ((nv != '0') && (nv != v)) {
+                if (eval(nv+'_initialized')) {
+                    active.push(nv);
+                }
+            }*/
+        //});
+        //var msg = '';
+        //if (active.length > 0) {
+            //msg = ""+active.length+" other version(s) active. These will be reset when you switch to "+v;
+
+
+                /*active.forEach(function(a) {
+                   eval(a+'_initialized = false;');
+                });*/
+
+        // }
+        //else {
+
+        //}
+    });
+
     $('.resources').change(function() {
         $(".methods").empty();
         $('.methods').append($('<option>', {
@@ -190,7 +205,7 @@ $(document).ready(function() {
         }
         cmds.reverse();
         if (cmds.length > 0) {
-            runScript(cmds, null, 1, function (r) {
+            runScript(sdk[current_version].sdk.APP.SDK,cmds, null, 1, function (r) {
                 if (r.error) {
                     logError(r.error);
                 }
@@ -278,7 +293,7 @@ $(document).ready(function() {
         }
         APP.SDK.Asset.add("meter100", "asia/mumbai", {description:"hello,world"}, function (e, r) {
             if (e == null) {
-                logPara();
+                //logPara();
                 logMsg(JSON.stringify(r));
             }
             else {
@@ -304,10 +319,15 @@ $(document).ready(function() {
         }
     });
 
+    showPopup($('<p>Please select version of system to test before any other action.</p>'));
+
 });
 
 function getSelectedResource(resource) {
-    var name = "APP.SDK";
+    if (current_version == null) {
+        return null;
+    }
+    var name = "sdk[current_version].sdk.APP.SDK";
     var objs = resource.split('.');
     for (var i = 0; i < objs.length; i++) {
         name += '["' + objs[i] + '"]';
@@ -317,6 +337,7 @@ function getSelectedResource(resource) {
 
 
 function logMsg(str) {
+    logPara()
     $("#log p:last-child").html($("#log p:last-child").html()+str+"<br>");
     scroll();
 }
@@ -348,7 +369,7 @@ function getFunctionArguments(f) {
 
 function generalcb(e, r) {
     if (e == null) {
-        logPara();
+        //logPara();
         logMsg(JSON.stringify(r));
     }
     else {
@@ -487,7 +508,7 @@ function showPopup(ele) {
     });
 }
 
-function run(code, cb) {
+function run(sdk, code, cb) {
 
     var p =  new Promise(
 
@@ -503,11 +524,11 @@ function run(code, cb) {
             var method = r[2].trim();
             var strargs = r[3].trim();
 
-            if (typeof(APP.SDK[resource]) != 'object') {
+            if (typeof(sdk[resource]) != 'object') {
                 reject(new Error('resource type "' + resource + '" is not known.'));
             }
 
-            if (typeof(APP.SDK[resource][method]) != 'function') {
+            if (typeof(sdk[resource][method]) != 'function') {
                 reject(new Error('method "' + method + '" does not exist for resource "' + resource + '"'));
             }
 
@@ -529,7 +550,7 @@ function run(code, cb) {
                 }
             });
 
-            APP.SDK[resource][method].apply(this, args);
+            sdk[resource][method].apply(this, args);
         }
     );
 
@@ -540,7 +561,7 @@ function run(code, cb) {
     });
 }
 
-function runScript(script, r, line, cb) {
+function runScript(sdk, script, r, line, cb) {
     var s = null;
     if (script.length > 0) {
         s = script.pop();
@@ -550,18 +571,18 @@ function runScript(script, r, line, cb) {
         return;
     }
     if (typeof(s) == 'string') {
-        run(s, function(r) {
+        run(sdk, s, function(r) {
             if (r.error) {
                cb({error:'line number: '+line+': '+r.error.message});
                 return;
             }
-            runScript(script, r.result, ++line, cb);
+            runScript(sdk, script, r.result, ++line, cb);
             return;
         });
     }
     else if (typeof(s) == 'function') {
         var ret = s(r);
-        runScript(script, ret, ++line, cb);
+        runScript(sdk, script, ret, ++line, cb);
         return;
     }
     else {
@@ -581,4 +602,46 @@ function getResources(o) {
         }
     }
     return res;
+}
+
+
+
+function login(ver) {
+    if ($.isEmptyObject(sdk[ver].sdk)) {
+        logMsg('[Error] Initialization attempted for unknown version!');
+        return;
+    }
+    if (!sdk[ver].sdk.APP.SDK.initialized) {
+        $.post("/login", {'version':ver}, function (data, status) {
+            if (data) {
+                if (data.access_token) {
+                        sdk[ver].sdk.APP.SDK.init($, {
+                            domain: sdk[ver]['domain'],
+                            port: 443,
+                            https: true,
+                            client_token: data.access_token
+                        },
+                        function () {
+                            current_version = ver;
+                            logMsg("Version '"+ver+"' initialized!");
+                        });
+                }
+                else {
+                    logMsg("Initializaton of version '"+ver+"' failed: "+data.message);
+                }
+            }
+        }, "json")
+            .fail(function (jqXHR, status, error) {
+                alert("Initialization of version '"+ver+"' failed! "+error);
+            });
+    }
+    else {
+        current_version = ver;
+    }
+}
+
+function reloadSDK()
+{
+    $('script[src$="sdk.js"]').remove();
+    $('head').append('<script src="js/sdk.js""></script>');
 }
