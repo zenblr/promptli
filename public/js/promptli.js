@@ -639,7 +639,8 @@ function login(ver) {
                             domain: sdk[ver]['domain'],
                             port: 443,
                             https: true,
-                            client_token: data.access_token
+                            client_token: data.access_token,
+                            version2: ver == 'v2' ? false : false
                         },
                         function () {
                             current_version = ver;

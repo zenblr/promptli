@@ -392,10 +392,7 @@ var loader = function (ctx) {
 						!!cfg.client_token ? {headers: {
 												Authorization : "Bearer " + cfg.client_token
 												}
-											} : {},
-						!!cfg.version2 ? {headers: {
-												"X-Timeli-Version" : "2.0"
-											}} : {}
+											} : {}
 						));
 			},
 			getPaging = function(data, lcfg) {
@@ -1219,13 +1216,13 @@ var loader = function (ctx) {
 			Channel: {
 				Blueprint: {
 					/**
-					 * Gets all asset channel blueprints.
+					 * Gets all label channel blueprints.
 					 *
-					 * @param assetId
 					 * @param cb
 					 */
-					get: function (id, cb) {
-						doGet.call(this, "label/" + id + "/channels/blueprints", null, ["blueprint"], cb);
+					get: function (cb) {
+						//doGet.call(this, "label/" + id + "/channels/blueprints", null, ["blueprint"], cb); // leading label/ should removed too.
+						doGet.call(this, "label/channels/blueprints", null, ["blueprint"], cb);
 					}
 				},
 
@@ -1315,17 +1312,27 @@ var loader = function (ctx) {
 				doPost.call(this, "label", vars, null, cb);
 			},
 			/**
-			 * Attaches an asset or assets to a label
+			 * Attaches an asset or assets to a label. Can be called with a SDK.Timespan to limit period of validity for association
 			 *
 			 * @param id
 			 * @param assetIds
+			 * @param [Optional] timespan
 			 * @param cb
 			 */
-			addAssets: function(id, assetIds, cb) {
+			addAssets: function(id, assetIds, timespan, cb) {
+				var vars = {assetIds: assetIds};
 				if (!$.isArray(assetIds)) {
 					assetIds = [assetIds];
 				}
-				doPost("label/" + id + "/assets", {assetIds: assetIds}, null, cb);
+				if ($.isFunction(timespan)) {
+					cb = timespan;
+				}
+				else {
+					timespan = timespan.asISOStrings();
+					vars.startDate = timespan.start;
+					vars.endDate = timespan.end;
+				}
+				doPost("label/" + id + "/assets", vars, null, cb);
 			},
 			/**
 			 * Changes the behavior of a label via APP.SDK.LabelBehavior
@@ -1374,6 +1381,15 @@ var loader = function (ctx) {
 			 */
 			getAssets: function(id, all, cb) {
 				doGet("label/" + id + "/assets" + (all ? "/all" : ""), null, ["asset"], cb);
+			},
+			/**
+			 * Gets all aggregations for assets in this label by an id.
+			 *
+			 * @param id
+			 * @param cb
+			 */
+			getAssetAggregations: function(id, cb) {
+				doGet("label/" + id + "/assets/aggregations", null, ['aggregation'], cb);
 			},
 			/**
 			 * Gets the children of the label specified
@@ -1526,13 +1542,23 @@ var loader = function (ctx) {
 					doGet("label/group/" + id, null, drill, cb);
 				},
 				/**
-				 * Gets all assets in this label group by an id or expression.
+				 * Gets all assets in this label group by an id or expression. Label group does not need to exist for an expression,
+				 * expression may be ordered arbitrarily
 				 *
 				 * @param id
 				 * @param cb
 				 */
 				getAssets: function(id, cb) {
 					doGet("label/group/" + id + "/assets", null, ['asset'], cb);
+				},
+				/**
+				 * Gets all aggregations for assets in this label group by an id or expression.
+				 *
+				 * @param id
+				 * @param cb
+				 */
+				getAssetAggregations: function(id, cb) {
+					doGet("label/group/" + id + "/assets/aggregations", null, ['aggregation'], cb);
 				},
 				/**
 				 * Removes a label group by its id
@@ -1545,46 +1571,6 @@ var loader = function (ctx) {
 				}
 			},
 			Type: {
-				/**
-				 * Adds a label type with name and optionally a description
-				 *
-				 * @param name
-				 * @param description
-				 * @param callback
-				 */
-				add: function(name, description, cb) {
-					LabelType.add(name, description, "type", cb);
-				},
-				/**
-				 * Deletes a label type by id
-				 *
-				 * @param id
-				 * @param cb
-				 */
-				delete: function(id, cb) {
-					LabelType.delete(id, "type", cb);
-				},
-				/**
-				 * Gets a label type via an id, finds it by a query, or gets all
-				 * depending on the value of idOrQuery
-				 *
-				 * @param idOrQuery
-				 * @param callback
-				 */
-				get: function(idOrQuery, cb) {
-					LabelType.get(idOrQuery, "type", cb);
-				},
-				/**
-				 * Get all labels with a type denoted by the given id
-				 *
-				 * @param id
-				 * @param cb
-				 */
-				getLabels: function(id, cb) {
-					LabelType.getLabels(id, "type", cb);
-				}
-			},
-			Node: {
 				/**
 				 * Adds a label type with name and optionally a description
 				 *
@@ -1859,27 +1845,27 @@ var loader = function (ctx) {
 				}
 			}
 		},
-		Permittables: {
+		Entities: {
 			/**
-			 * Gets a permittable (asset, label, label group, or label type) by its id
+			 * Gets a entity (asset, label, label group, or label type) by its id
 			 *
 			 * @param id
 			 * @param cb
 			 */
 			get: function(id, cb) {
-				doGet.call(this, "permittable/" + id, null, cb);
+				doGet.call(this, "entity/" + id, null, cb);
 			},
 			/**
-			 * Finds all permittables (asset, label, label group, or label type) with a name containing the search parameter
+			 * Finds all entities (asset, label, label group, or label type) with a name containing the search parameter
 			 *
 			 * @param search
 			 * @param cb
 			 */
 			find: function(search, cb) {
-				if (!search) {
+				if (!search) {Entity
 					cb(null, []);
 				}
-				doGet.call(this, "permittable/find", {query: search}, ["permittable"], cb);
+				doGet.call(this, "entity/find", {query: search}, ["entity"], cb);
 			}
 		},
 		Tasks: {

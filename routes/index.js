@@ -76,14 +76,20 @@ var creds = {'v1':{
                     'client':"e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
                     'secret':"volume1secret",
                     'redirect_uri':"http://fiddle.jshell.net",
-                    'scopes':"Administrator"
+                    'scopes':"Administrator",
+                    'grant_type': 'client_credentials',
+                    'username':null,
+                    'password':null
                   },
              'v2':{
                     'domain':"volume.timeli-staging.com",
                     'client':"e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
                     'secret':"volume1secret",
                     'redirect_uri':"http://fiddle.jshell.net",
-                    'scopes':"administer"
+                    'scopes':"ADMINISTER",
+                    'grant_type': 'password',
+                    'username':'vijay',
+                    'password':'vijaytimeli'
                   }
             };
 
@@ -94,17 +100,25 @@ function authenticateClient(version, cb) {
         secret       = creds[version]['secret'],
         redirect_uri = creds[version]['redirect_uri'],
         scopes       = creds[version]['scopes'];
+        grant_type   = creds[version]['grant_type'];
+        username     = creds[version]['username'];
+        password     = creds[version]['password'];
 
     var querystring = require('querystring'),
         https       = require('https');
 
-    var data = querystring.stringify({
-                    grant_type: "client_credentials",
-                    client_id: client,
-                    client_secret: secret,
-                    scope: scopes,
-                    redirect_uri: redirect_uri
-               });
+    var access_data = {grant_type: grant_type,
+                       client_id: client,
+                       client_secret: secret,
+                       scope: scopes,
+                       redirect_uri: redirect_uri};
+    if (username != null) {
+        access_data['username'] = username;
+    }
+    if (password != null) {
+        access_data['password'] = password;
+    }
+    var data = querystring.stringify(access_data);
     var options = {
             host: domain,
             port: port,
