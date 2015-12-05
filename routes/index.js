@@ -4,7 +4,7 @@ var log4js = require('log4js');
 var logger = log4js.getLogger("INDEX");
 logger.setLevel("DEBUG");
 var db = require('../lib/db').db;
-
+var oneHour = 1 * 60 * 60 * 1000;
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
@@ -15,10 +15,24 @@ router.post('/:ask', function(req, res, next) {
       case 'login':
         var version = req.body.version;
         res.setHeader('Content-Type', 'application/json');
-        authenticateClient(version, function(repl) {
-            res.send(repl);
+        if ((req.session) && (req.session.TimeliAuth) && (req.session.TimeliAuth[version])) {
+            res.send({access_token:req.session.TimeliAuth[version].access_token, message:''})
             res.end();
-        });
+        }
+        else {
+            authenticateClient(version, function(repl) {
+                if (repl.access_token) {
+                    var auth = {};
+                    if (req.session.TimeliAuth) {
+                        auth = req.session.TimeliAuth;
+                    }
+                    auth[version] = {access_token:repl.access_token};
+                    res.cookie('TimeliAuth', auth, {maxAge: oneHour, signed:true});
+                }
+                res.send(repl);
+                res.end();
+            });
+        }
         break;
       case 'save':
           res.setHeader('Content-Type', 'application/json');
@@ -43,7 +57,6 @@ router.get('/:ask', function(req, res, next) {
         case 'get':
             res.setHeader('Content-Type', 'application/json');
             var name = req.query.name;
-            console.log(">> "+name);
             db.tests.findOne({name:name}, function(err, test){
                 if (!err && test) {
                     res.send({status:'success', content:test.content});
@@ -92,6 +105,7 @@ var creds = {'v1':{
                     'password':'vijaytimeli'
                   }
             };
+
 
 function authenticateClient(version, cb) {
     var domain       = creds[version]['domain'],

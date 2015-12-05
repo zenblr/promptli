@@ -9,6 +9,7 @@ var sdk = {
 
 var g = {};
 var current_version = null;
+var in_regression_mode = false;
 
 $(document).ready(function() {
 
@@ -29,8 +30,10 @@ $(document).ready(function() {
     }*/
     $('.version').change(function() {
         var v = $(this).val();
-        if (current_version != v) {
-            login(v);
+        if ((v != 0) && (v != 'a')) {
+            if (current_version != v) {
+                login(v);
+            }
         }
 
         /*if (eval(v+'_initialized')) {
@@ -205,14 +208,11 @@ $(document).ready(function() {
         }
         cmds.reverse();
         if (cmds.length > 0) {
-            runScript(sdk[current_version].sdk.APP.SDK,cmds, null, 1, function (r) {
-                if (r.error) {
-                    logError(r.error);
-                }
-                else {
-                    logMsg(typeof(r.val) != 'undefined' ? JSON.stringify(r.val) : "No return value");
-                }
+            var versions = getVersionsToTest();
+            execute(versions, cmds, true, function() {
+                logMsg("Completed");
             });
+
         }
     });
 
@@ -225,14 +225,42 @@ $(document).ready(function() {
                 vals.push((val.charAt(0) == '{' ? JSON.parse(val) : val));
             }
         });
-        var resource = getSelectedResource($('.resources').val());
-        var method = $('.methods').val();
-        vals.push(generalcb);
-        resource[method].apply(resource, vals);
+
+        var versions = getVersionsToTest();
+        execute(versions, vals, false, function() {
+           logMsg("Completed");
+        });
+        /*versions.forEach(function(ver) {
+            var resource = getSelectedResource($('.resources').val(), ver);
+            var method = $('.methods').val();
+            vals.push(generalcb);
+            resource[method].apply(resource, vals);
+        });*/
+
     });
+
+
 
     $('.clear-transcript').click(function() {
         $('#log').empty().append('<p align="left"></p>');
+    });
+
+    $('input[name=mode]').change(function() {
+        if ($(this).is(':checked')) {
+            in_regression_mode = true;
+            logMsg('Switching to regression mode testing');
+            $(".version").val('a');
+            for (var ver in sdk) {
+                if (sdk.hasOwnProperty(ver)) {
+                    login(ver);
+                }
+            }
+        }
+        else {
+            in_regression_mode = false;
+            $(".version").val(current_version);
+            logMsg('Switching to regular mode testing with version: '+current_version);
+        }
     });
 
     $("#sdk-authenticate").click(function() {
@@ -319,15 +347,32 @@ $(document).ready(function() {
         }
     });
 
-    showPopup($('<p>Please select version of system to test before any other action.</p>'));
+    showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
 
 });
 
-function getSelectedResource(resource) {
-    if (current_version == null) {
+function getVersionsToTest() {
+    var versions =  [];
+    if (in_regression_mode) {
+        for (var ver in sdk) {
+            if (sdk.hasOwnProperty(ver)) {
+                versions.push(ver);
+            }
+        }
+    }
+    else {
+        versions.push(current_version);
+    }
+    return versions;
+}
+
+
+function getSelectedResource(resource, ver) {
+    ver = ver || current_version;
+    if (ver == null) {
         return null;
     }
-    var name = "sdk[current_version].sdk.APP.SDK";
+    var name = "sdk['"+ver+"'].sdk.APP.SDK";
     var objs = resource.split('.');
     for (var i = 0; i < objs.length; i++) {
         name += '["' + objs[i] + '"]';
@@ -665,4 +710,43 @@ function reloadSDK()
 {
     $('script[src$="sdk.js"]').remove();
     $('head').append('<script src="js/sdk.js""></script>');
+}
+
+function execute(versions, data, isScript, cb) {
+    var ver;
+    var data_copy = data.slice();
+    if (versions.length == 0) {
+        if (cb && (typeof(cb) == 'function')) {
+            cb();
+        }
+        return;
+    }
+    else {
+        ver = versions.pop();
+        logMsg("Running version "+ver);
+    }
+    if (!isScript) {
+
+        var resource = getSelectedResource($('.resources').val(), ver);
+        var method = $('.methods').val();
+        data.push(function(e,r) {
+            generalcb(e,r);
+            data = data_copy;
+            execute(versions, data, isScript, cb);
+        });
+        resource[method].apply(resource, data);
+    }
+    else {
+        runScript(sdk[ver].sdk.APP.SDK, data, null, 1, function (r) {
+            if (r.error) {
+                logError(r.error);
+            }
+            else {
+                logMsg(typeof(r.val) != 'undefined' ? JSON.stringify(r.val) : "No return value");
+            }
+            data = data_copy;
+            execute(versions, data, isScript, cb);
+        });
+    }
+
 }

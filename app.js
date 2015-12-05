@@ -4,6 +4,8 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var expressSession = require('express-session');
+var mongoStore = require('express-session-mongo');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
@@ -23,6 +25,7 @@ log4js.configure({
   replaceConsole: true
 });
 
+var oneHour = 1 * 60 * 60 * 1000;
 var app = express();
 
 // view engine setup
@@ -34,8 +37,18 @@ app.set('view engine', 'ejs');
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('promptli'));
+app.use(expressSession({secret:'promptli', cookie: {maxAge:oneHour},  store: new mongoStore({db:'Tli'})}));
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(function(req,res,next) {
+  if (req.session) {
+    if (req.signedCookies.TimeliAuth) {
+      req.session.TimeliAuth = req.signedCookies.TimeliAuth;
+    }
+  }
+  next();
+});
 
 app.use('/', routes);
 app.use('/users', users);
