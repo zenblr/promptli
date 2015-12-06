@@ -5,6 +5,7 @@ var logger = log4js.getLogger("INDEX");
 logger.setLevel("DEBUG");
 var db = require('../lib/db').db;
 var oneHour = 1 * 60 * 60 * 1000;
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
@@ -13,42 +14,57 @@ router.get('/', function(req, res, next) {
 router.post('/:ask', function(req, res, next) {
   switch(req.params.ask) {
       case 'login':
-        var version = req.body.version;
-        res.setHeader('Content-Type', 'application/json');
-        if ((req.session) && (req.session.TimeliAuth) && (req.session.TimeliAuth[version])) {
-            res.send({access_token:req.session.TimeliAuth[version].access_token, message:''})
-            res.end();
-        }
-        else {
-            authenticateClient(version, function(repl) {
-                if (repl.access_token) {
-                    var auth = {};
-                    if (req.session.TimeliAuth) {
-                        auth = req.session.TimeliAuth;
-                    }
-                    auth[version] = {access_token:repl.access_token};
-                    res.cookie('TimeliAuth', auth, {maxAge: oneHour, signed:true});
+            var version = req.body.version;
+            res.setHeader('Content-Type', 'application/json');
+            db.server_auth.findOne({version:version}, function(err, data){
+                if (!err && data) {
+                    res.send(data);
+                    res.end();
                 }
-                res.send(repl);
+                else {
+                    authenticateClient(version, function(repl) {
+                        var data = {};
+                        if (repl != null) {
+                            data = JSON.parse(repl);
+                        }
+                        if (data.access_token) {
+                            data.version=version;
+                            db.server_auth.save(data);
+                        }
+                        res.send(repl);
+                        res.end();
+                    });
+                }
+            });
+            break;
+      case 'refresh_token':
+            var version = req.body.version;
+            res.setHeader('Content-Type', 'application/json');
+            db.server_auth.remove({version:version}, function(err, data) {
+                if (!err) {
+                    res.send({"status": "success"});
+                }
+                else {
+                    res.send({"status": "fail"});
+                }
                 res.end();
             });
-        }
-        break;
+            break;
       case 'save':
-          res.setHeader('Content-Type', 'application/json');
-          var name = req.body.name;
-          var content = req.body.content;
-          db.tests.save({name:name, content:content});
-          res.send({status:'success'});
-          res.end();
-          break;
+            res.setHeader('Content-Type', 'application/json');
+            var name = req.body.name;
+            var content = req.body.content;
+            db.tests.save({name:name, content:content});
+            res.send({status:'success'});
+            res.end();
+            break;
       default:
-        if (next) {
-            var err = new Error('Not Found');
-            err.status = 404;
-            next(err);
-        }
-        break;
+            if (next) {
+                var err = new Error('Not Found');
+                err.status = 404;
+                next(err);
+            }
+            break;
   }
 });
 
