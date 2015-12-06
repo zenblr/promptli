@@ -17,11 +17,12 @@ router.post('/:ask', function(req, res, next) {
             var version = req.body.version;
             res.setHeader('Content-Type', 'application/json');
             db.server_auth.findOne({version:version}, function(err, data){
-                if (!err && data) {
+                if ((!err && data) && (is_valid_token(data))){
                     res.send(data);
                     res.end();
                 }
                 else {
+                    remove_token(version);
                     authenticateClient(version, function(repl) {
                         var data = {};
                         if (repl != null) {
@@ -29,6 +30,7 @@ router.post('/:ask', function(req, res, next) {
                         }
                         if (data.access_token) {
                             data.version=version;
+                            data.date = Date.now();
                             db.server_auth.save(data);
                         }
                         res.send(repl);
@@ -40,15 +42,20 @@ router.post('/:ask', function(req, res, next) {
       case 'refresh_token':
             var version = req.body.version;
             res.setHeader('Content-Type', 'application/json');
-            db.server_auth.remove({version:version}, function(err, data) {
-                if (!err) {
-                    res.send({"status": "success"});
-                }
-                else {
-                    res.send({"status": "fail"});
-                }
+            if (typeof(version) == "undefined") {
+                res.send({"status": "fail", "message": "no version specified"});
                 res.end();
-            });
+            }
+            else if(!(version in creds)) {
+                res.send({"status": "fail", "message": "unknown version specified"});
+                res.end();
+            }
+            else {
+                remove_token(version, function(ret) {
+                    res.send(ret);
+                    res.end();
+                });
+            }
             break;
       case 'save':
             res.setHeader('Content-Type', 'application/json');
@@ -179,4 +186,27 @@ function authenticateClient(version, cb) {
 
     req.write(data);
     req.end();
+}
+
+function remove_token(version, cb) {
+    db.server_auth.remove({version:version}, function(err, data) {
+        if (cb && (typeof(cb) == "function")) {
+            if (!err) {
+                cb({"status": "success"});
+            }
+            else {
+                cb({"status": "fail"});
+            }
+        }
+    });
+}
+
+function is_valid_token(data) {
+    var now = Date.now();
+    var then = data.date;
+    var expires_in = data.expires_in;
+    if (((now-then)/1000) > expires_in) {
+        return false;
+    }
+    return true;
 }
