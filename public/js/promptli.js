@@ -209,10 +209,9 @@ $(document).ready(function() {
         cmds.reverse();
         if (cmds.length > 0) {
             var versions = getVersionsToTest();
-            execute(versions, cmds, true, function() {
-                logMsg("Completed");
+            execute(versions, cmds, true, function(results) {
+                evaluateResults(results);
             });
-
         }
     });
 
@@ -227,8 +226,8 @@ $(document).ready(function() {
         });
 
         var versions = getVersionsToTest();
-        execute(versions, vals, false, function() {
-           logMsg("Completed");
+        execute(versions, vals, false, function(results) {
+            evaluateResults(results);
         });
         /*versions.forEach(function(ver) {
             var resource = getSelectedResource($('.resources').val(), ver);
@@ -388,8 +387,9 @@ function logMsg(str) {
 }
 
 function logError(str) {
-    $("#log").append('<p align="left" style="color:red">'+str+'</p><br>');
     logPara();
+    $("#log").append('<p align="left" style="color:red">'+str+'</p><br>');
+    scroll();
 }
 
 function logPara() {
@@ -647,6 +647,7 @@ function runScript(sdk, script, r, line, cb) {
     }
     else if (typeof(s) == 'function') {
         var ret = s(r);
+
         runScript(sdk, script, ret, ++line, cb);
         return;
     }
@@ -712,12 +713,13 @@ function reloadSDK()
     $('head').append('<script src="js/sdk.js""></script>');
 }
 
-function execute(versions, data, isScript, cb) {
+function execute(versions, data, isScript, cb, results) {
     var ver;
+    results = results || [];
     var data_copy = data.slice();
     if (versions.length == 0) {
         if (cb && (typeof(cb) == 'function')) {
-            cb();
+            cb(results);
         }
         return;
     }
@@ -730,23 +732,100 @@ function execute(versions, data, isScript, cb) {
         var resource = getSelectedResource($('.resources').val(), ver);
         var method = $('.methods').val();
         data.push(function(e,r) {
-            generalcb(e,r);
+            results.push({e:e,r:r,v:ver});
             data = data_copy;
-            execute(versions, data, isScript, cb);
+            execute(versions, data, isScript, cb, results);
         });
         resource[method].apply(resource, data);
     }
     else {
-        runScript(sdk[ver].sdk.APP.SDK, data, null, 1, function (r) {
-            if (r.error) {
-                logError(r.error);
-            }
-            else {
-                logMsg(typeof(r.val) != 'undefined' ? JSON.stringify(r.val) : "No return value");
-            }
+        runScript(sdk[ver].sdk.APP.SDK, data, null, 1, function (ret) {
+            var e = !!ret.error ? ret.error : null;
+            var r = !!ret.val ? ret.val : null;
+            results.push({e:e,r:r,v:ver});
             data = data_copy;
-            execute(versions, data, isScript, cb);
+            execute(versions, data, isScript, cb, results);
         });
     }
 
 }
+
+function evaluateResults(results) {
+    if (results.length == 0) {
+        logMsg("No results returned.");
+    }
+    else if (results.length == 1) {
+        if (results[0].e == null) {
+            logMsg(JSON.stringify(results[0].r));
+        }
+        else {
+            logError(JSON.stringify(results[0].e));
+        }
+    }
+    else {
+        var passed = true;
+        var message = '';
+        for (var i=1; i<results.length; i++) {
+            if (results[i].e != null) {
+                if (results[0].e == null) {
+                    passed = false;
+                    message += "Version "+results[i].v+" returned error. Version "+results[0].v+" did not.";
+                    break;
+                }
+            }
+            else if (results[i].e == null) {
+                if (results[0].e != null) {
+                    passed = false;
+                    message += "Version "+results[0].v+" returned error. Version "+results[i].v+" did not.";
+                    break;
+                }
+            }
+            if ((results[i].e == null) && (results[0].e == null)) {
+                if (typeof(results[i].r) != typeof(results[0].r)) {
+                    passed = false;
+                    message += "Returned types from version "+results[i].v+" version "+results[0].v+" are different.";
+                    break;
+                }
+                else {
+                    if ((typeof(results[0].r) == "string") ||
+                        (typeof(results[0].r) == "number") ||
+                        (typeof(results[0].r) == "boolean")) {
+                        if (results[0].r != results[i].r) {
+                            passed = false;
+                            message += "version "+results[i].v+" returned '"+results[i].r+"' ,"+
+                                       "version "+results[0].v+" returned '"+results[0].r+"'";
+                            break;
+                        }
+                    }
+                    else if (Array.isArray(results[0].r) && Array.isArray(results[i].r)) {
+                        passed = results[0].r.length == results[i].r.length;
+                        if (!passed) {
+                            message += "Returned array length from version "+results[0].v+" is "+results[0].r.length+" and from version "+results[i].v+" is "+results[i].r.length;
+                            break;
+                        }
+                    }
+                    else if (typeof(results[0].r) == "object") {
+                        for (var key in results[0].r) {
+                            if (results[0].r.hasOwnProperty(key)) {
+                                if (typeof(results[i].r[key]) != typeof(results[0].r[key])) {
+                                    passed = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!passed) {
+                            message += "Returned array keys differ in type or number between versions "+results[0].v+" and "+results[i].v;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        logMsg("Test "+(passed ? "passed" : "failed"))
+        if (!passed) {
+            logError(message);
+        }
+    }
+}
+
+
