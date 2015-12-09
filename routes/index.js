@@ -61,7 +61,14 @@ router.post('/:ask', function(req, res, next) {
             res.setHeader('Content-Type', 'application/json');
             var name = req.body.name;
             var content = req.body.content;
-            db.tests.save({name:name, content:content});
+            var desc = req.body.description;
+            var type = req.body.content_type;
+
+            if (type && (type == "array")) {
+                content = JSON.parse(content);
+            }
+            //db.tests.save({name:name, desc:desc,content:content});
+            db.tests.update({name:name}, {name:name,desc:desc,content:content}, {upsert:true});
             res.send({status:'success'});
             res.end();
             break;
@@ -82,7 +89,8 @@ router.get('/:ask', function(req, res, next) {
             var name = req.query.name;
             db.tests.findOne({name:name}, function(err, test){
                 if (!err && test) {
-                    res.send({status:'success', content:test.content});
+                    var content_type = Array.isArray(test.content) ? "array" : "string";
+                    res.send({status:'success', content:test.content, content_type:content_type});
                     res.end();
                 }
                 else {

@@ -10,6 +10,8 @@ var sdk = {
 var g = {};
 var current_version = null;
 var in_regression_mode = false;
+var in_recording_mode = false;
+var recorded_script = [];
 
 $(document).ready(function() {
 
@@ -33,6 +35,17 @@ $(document).ready(function() {
         if ((v != 0) && (v != 'a')) {
             if (current_version != v) {
                 login(v);
+            }
+            if ($('input[name=mode]').prop("checked")) {
+                $('input[name=mode]').prop("checked", false).change();
+            }
+        }
+        else if (v == 'a') {
+            $('input[name=mode]').prop("checked", true).change();
+        }
+        else {
+            if ($('input[name=mode]').prop("checked")) {
+                $('input[name=mode]').prop("checked", false).change();
             }
         }
 
@@ -185,7 +198,12 @@ $(document).ready(function() {
             var name = ele.find('input[name=name]').val();
             $.get("/get", {name:name}, function(resp) {
                 if (resp.status == "success") {
-                    $('textarea[name=code]').val(resp.content);
+                    if (resp.content_type && (resp.content_type == "array")) {
+                        $('textarea[name=code]').val(JSON.stringify(resp.content));
+                    }
+                    else {
+                        $('textarea[name=code]').val(resp.content);
+                    }
                     ele.find('input').remove();
                     ele.find('.popupget').remove();
                     ele.append("<p>Your test script '"+name+"' has been fetched.");
@@ -197,21 +215,28 @@ $(document).ready(function() {
     });
 
     $('.run-button').click(function() {
+        var versions = getVersionsToTest();
+        var cmds;
         var text = $('textarea[name=code]').val().trim();
-        var cmds = [];
-        try {
-            cmds = eval('[' + text + ']');
+        if ((text.charAt(0) == '[') &&  (text.charAt(text.length -1) == ']')) {
+            cmds = JSON.parse(text);
+            cmds.reverse();
+            runScriptArray(versions, cmds);
         }
-        catch (error) {
-            logError("[Error] "+error.message);
-            return;
-        }
-        cmds.reverse();
-        if (cmds.length > 0) {
-            var versions = getVersionsToTest();
-            execute(versions, cmds, true, function(results) {
-                evaluateResults(results);
-            });
+        else {
+            try {
+                cmds = eval('[' + text + ']');
+            }
+            catch (error) {
+                logError("[Error] "+error.message);
+                return;
+            }
+            cmds.reverse();
+            if (cmds.length > 0) {
+                execute(versions, cmds, true, function(results) {
+                    evaluateResults(results);
+                });
+            }
         }
     });
 
@@ -226,6 +251,9 @@ $(document).ready(function() {
         });
 
         var versions = getVersionsToTest();
+        if (in_recording_mode) {
+            do_record($('.resources').val(),$('.methods').val(), vals);
+        }
         execute(versions, vals, false, function(results) {
             evaluateResults(results);
         });
@@ -237,6 +265,7 @@ $(document).ready(function() {
         });*/
 
     });
+
 
 
 
@@ -343,6 +372,51 @@ $(document).ready(function() {
     $("input[name=command]").keyup(function(e) {
         if (e.keyCode == 13) {
             logMsg($(this).val());
+        }
+    });
+
+    $(".recording:not(.roundbutton)").click(function() {
+        var not_recording = !!$('.recording:not(.roundbutton)').text().match(/Start/);
+
+        if (not_recording) {
+            $('.recording.roundbutton').css('background-color','red');
+            $('.recording:not(.roundbutton)').text("Stop Recording");
+            in_recording_mode = true;
+        }
+        else {
+            $('.recording.roundbutton').css('background-color','white');
+            $('.recording:not(.roundbutton)').text("Start Recording");
+            in_recording_mode = false;
+
+        }
+    });
+
+    $(".reset-recording").click(function() {
+        recorded_script = [];
+        logMsg("Recording has been reset.")
+    });
+
+    $(".save-recording").click(function() {
+        if (recorded_script.length > 0) {
+            var ele = $('div.save').clone();
+            ele.find('.popupsave').click(function() {
+                var name = ele.find('input[name=name]').val();
+                var desc = ele.find('textarea[name=description]').val();
+                var content = JSON.stringify(recorded_script);
+                $.post("/save", {name:name, description:desc, content:content, content_type:"array"}, function(resp) {
+                    if (resp.status == "success") {
+                        ele.find('input').remove();
+                        ele.find('textarea').remove();
+                        ele.find('.popupsave').remove();
+                        ele.prepend("<p>Your test script has been saved as: '"+name+"'</p>");
+                        logMsg("Test script saved as: '"+name+"'");
+                    }
+                }, "json");
+            });
+            showPopup(ele);
+        }
+        else {
+            showPopup($("<p>No recording to save</p>"));
         }
     });
 
@@ -750,6 +824,20 @@ function execute(versions, data, isScript, cb, results) {
 
 }
 
+
+function runScriptArray(versions, scripts) {
+    if (scripts.length == 0) {
+        return;
+    }
+    var versions_copy = versions.slice();
+    s = [scripts.pop()];
+    execute(versions, s, true, function (results) {
+        evaluateResults(results);
+        versions = versions_copy;
+        runScriptArray(versions, scripts);
+    });
+}
+
 function evaluateResults(results) {
     if (results.length == 0) {
         logMsg("No results returned.");
@@ -826,6 +914,22 @@ function evaluateResults(results) {
             logError(message);
         }
     }
+}
+
+function do_record(resource, method, vals) {
+    var script = "'"+resource+"."+method+"(";
+    vals.forEach(function(v) {
+        if (typeof(v) == "string") {
+            script += '"'+v+'",';
+        }
+        else if (typeof(v) == "object") {
+            script += JSON.stringify(v)+',';
+        }
+    });
+    script = script.replace(/,$/,'');
+    script += ")'";
+    logMsg(script);
+    recorded_script.push(script);
 }
 
 

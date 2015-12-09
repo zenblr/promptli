@@ -63,3 +63,12 @@ hr {
   height:50px;
   overflow-y: auto;
 }
+
+.roundbutton {
+  width: 15px;
+  height: 15px;
+  background-color: white;
+  border: solid 1px #000;
+  border-radius: 50%;
+  vertical-align:middle;
+}

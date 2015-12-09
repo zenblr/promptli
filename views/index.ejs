@@ -99,7 +99,11 @@
           </div>
           <div id="busy" style="display:none"><img src="/images/loading.gif"></div>
           <button class="clear-transcript">Clear Transcript</button>
-        <input style="margin-right:5px; margin-left:100px;" type="checkbox" name="mode" value="mode">Use Regression Mode
+          <input style="margin-right:5px; margin-left:100px;" type="checkbox" name="mode" value="mode">Use Regression Mode
+          <button class="recording" style="margin-left:100px;">Start Recording</button>
+          <button class="recording roundbutton"></button>
+          <button class="reset-recording" style="margin-left:100px;">Reset Recording</button>
+          <button class="save-recording" style="margin-left:100px;">Save Recording</button>
           <div id="log" class="console"><p align="left"></p></div>
       </div>
 
@@ -107,6 +111,8 @@
     <div style="display:none;">
         <div class="save">
             <input type="text" name="name" placeholder="Name of Test">
+            <textarea name="description" rows="2" cols="50" placeholder="Description"></textarea>
+            <!--<input type="text" name="description" placeholder="Description">-->
             <button class="popupsave">Save</button>
             <button class="xbutton">Close</button>
         </div>
