@@ -77,6 +77,7 @@
                <div class="code-box show-box">
                    <p style="margin:10px;">Please enter your test code here.<br> click 'Run' when done.</p>
                    <textarea name="code" cols="40" rows="5" ... ></textarea>
+                   <input name="script_name_for_code" type="hidden">
                    <div>
                         <button class="run-button">Run</button>
                        <button class="save-button">Save</button>
@@ -99,11 +100,12 @@
           </div>
           <div id="busy" style="display:none"><img src="/images/loading.gif"></div>
           <button class="clear-transcript">Clear Transcript</button>
-          <input style="margin-right:5px; margin-left:100px;" type="checkbox" name="mode" value="mode">Use Regression Mode
+          <input style="margin-right:5px; margin-left:100px;vertical-align:top;" type="checkbox" name="mode" value="mode">Use Regression Mode
           <button class="recording" style="margin-left:100px;">Start Recording</button>
           <button class="recording roundbutton"></button>
-          <button class="reset-recording" style="margin-left:100px;">Reset Recording</button>
-          <button class="save-recording" style="margin-left:100px;">Save Recording</button>
+          <button class="reset-recording" style="margin-left:50px;">Reset Recording</button>
+          <button class="save-recording" style="margin-left:50px;">Save Recording</button>
+          <button class="run-recording" style="margin-left:50px;">Run Script</button>
           <div id="log" class="console"><p align="left"></p></div>
       </div>
 
@@ -117,7 +119,7 @@
             <button class="xbutton">Close</button>
         </div>
         <div class="get">
-            <input type="text" name="name" placeholder="Name of Test">
+            <input type="text" name="name" placeholder="Name of Script">
             <button class="popupget">Get</button>
             <button class="xbutton">Close</button>
         </div>

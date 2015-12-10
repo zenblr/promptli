@@ -22,14 +22,6 @@ $(document).ready(function() {
             text: v
         }));
     });
-    /*for (var name in APP.SDK) {
-        if (APP.SDK.hasOwnProperty(name) && (typeof(APP.SDK[name]) != "function")) {
-            $('.resources').append($('<option>', {
-                value: name,
-                text: name
-            }));
-        }
-    }*/
     $('.version').change(function() {
         var v = $(this).val();
         if ((v != 0) && (v != 'a')) {
@@ -49,31 +41,6 @@ $(document).ready(function() {
             }
         }
 
-        /*if (eval(v+'_initialized')) {
-            return;
-        }*/
-        //var active = [];
-        /*$('.version option').each(function() {
-            var nv = $(this).val();
-            if ((nv != '0') && (nv != v)) {
-                if (eval(nv+'_initialized')) {
-                    active.push(nv);
-                }
-            }*/
-        //});
-        //var msg = '';
-        //if (active.length > 0) {
-            //msg = ""+active.length+" other version(s) active. These will be reset when you switch to "+v;
-
-
-                /*active.forEach(function(a) {
-                   eval(a+'_initialized = false;');
-                });*/
-
-        // }
-        //else {
-
-        //}
     });
 
     $('.resources').change(function() {
@@ -93,23 +60,6 @@ $(document).ready(function() {
         }
     });
 
-    /*$('.resources').change(function() {
-        $(".methods").empty();
-        $('.methods').append($('<option>', {
-            value: '0',
-            text: 'Select Method'
-        }));
-        var res = $(this).val();
-        for (var name in APP.SDK[res]) {
-            if ((APP.SDK[res].hasOwnProperty(name)) &&  (typeof(APP.SDK[res][name]) == "function")) {
-                $('.methods').append($('<option>', {
-                    value: name,
-                    text: name
-                }));
-            };
-         }
-    });
-*/
     $('.methods').change(function() {
         var method = $(this).val();
         if (method == '0') {
@@ -130,37 +80,11 @@ $(document).ready(function() {
                 $('.params').append($('<input type="text" value="" name="' + name + '">'));
                 $('.params').append($('<br>'));
             }
-            //$('.params').append($('<button class="go-button">Go</button>'));
             $('.code-box').hide();
             $('.go-box').show();
         }
     });
 
-    /*$('.methods').change(function() {
-        var method = $(this).val();
-        var resource = $('.resources').val();
-        if (method == '0') {
-            return;
-        }
-        var args = getFunctionArguments(APP.SDK[resource][method]);
-        if (args.length > 0) {
-            $('.params').empty();
-            var prefix = resource+'_'+method+'_';
-            for (var i=0; i<args.length; i++) {
-                if (args[i] == 'cb') {
-                    continue;
-                }
-                var name = prefix+args[i];
-                /!*$('.params').append($('<label>'+args[i]+':  <input type="text" value="" name="'+name+'"></label>'));*!/
-                $('.params').append($('<label for="'+name+'">'+args[i]+'</label>'));
-                $('.params').append($('<input type="text" value="" name="'+name+'">'));
-                $('.params').append($('<br>'));
-            }
-            //$('.params').append($('<button class="go-button">Go</button>'));
-            $('.code-box').hide();
-            $('.go-box').show();
-        }
-    });*/
 
     $('.code-button').click(function() {
         $('.go-box').hide();
@@ -185,7 +109,7 @@ $(document).ready(function() {
                     ele.find('input').remove();
                     ele.find('.popupsave').remove();
                     ele.append("<p>Your test script has been saved as: '"+name+"'");
-                    logMsg("Test script saved as: '"+name+"'");
+                    logMsg("INFO", "Test script saved as: '"+name+"'");
                 }
             }, "json");
         })
@@ -207,7 +131,7 @@ $(document).ready(function() {
                     ele.find('input').remove();
                     ele.find('.popupget').remove();
                     ele.append("<p>Your test script '"+name+"' has been fetched.");
-                    logMsg("Test script '"+name+"' loaded.");
+                    logMsg("INFO", "Test script '"+name+"' loaded.");
                 }
             }, "json");
         })
@@ -216,6 +140,13 @@ $(document).ready(function() {
 
     $('.run-button').click(function() {
         var versions = getVersionsToTest();
+        if (versions == null) {
+            return;
+        }
+        if ($('input[name=script_name_for_code]').val() != '') {
+            logMsg("INFO", "Running script '"+$('input[name=script_name_for_code]').val()+"'...");
+        }
+        $('input[name=script_name_for_code]').val('');
         var cmds;
         var text = $('textarea[name=code]').val().trim();
         if ((text.charAt(0) == '[') &&  (text.charAt(text.length -1) == ']')) {
@@ -228,7 +159,7 @@ $(document).ready(function() {
                 cmds = eval('[' + text + ']');
             }
             catch (error) {
-                logError("[Error] "+error.message);
+                logMsg("ERROR", error.message);
                 return;
             }
             cmds.reverse();
@@ -251,18 +182,15 @@ $(document).ready(function() {
         });
 
         var versions = getVersionsToTest();
+        if (versions == null) {
+            return;
+        }
         if (in_recording_mode) {
             do_record($('.resources').val(),$('.methods').val(), vals);
         }
         execute(versions, vals, false, function(results) {
             evaluateResults(results);
         });
-        /*versions.forEach(function(ver) {
-            var resource = getSelectedResource($('.resources').val(), ver);
-            var method = $('.methods').val();
-            vals.push(generalcb);
-            resource[method].apply(resource, vals);
-        });*/
 
     });
 
@@ -276,7 +204,7 @@ $(document).ready(function() {
     $('input[name=mode]').change(function() {
         if ($(this).is(':checked')) {
             in_regression_mode = true;
-            logMsg('Switching to regression mode testing');
+            logMsg("INFO", 'Switching to regression mode testing');
             $(".version").val('a');
             for (var ver in sdk) {
                 if (sdk.hasOwnProperty(ver)) {
@@ -287,91 +215,13 @@ $(document).ready(function() {
         else {
             in_regression_mode = false;
             $(".version").val(current_version);
-            logMsg('Switching to regular mode testing with version: '+current_version);
+            logMsg("INFO", 'Switching to regular mode testing with version: '+current_version);
         }
-    });
-
-    $("#sdk-authenticate").click(function() {
-        $.post("/login", function (data, status) {
-            if (data && data.access_token) {
-                //access_token = data.access_token;
-                APP.SDK.init($, {
-                        domain: "hari.timeli.io",
-                        port: 443,
-                        https: true,
-                        client_token: data.access_token
-                    },
-                    function () {
-                        timeli_initialized = true;
-                        logMsg("Initialization Completed!");
-                    });
-
-            }
-            /*
-            var s = '';
-            for (var key in data) {
-                if (data.hasOwnProperty(key)) {
-                    s += '['+key+'='+data[key]+']\n';
-                }
-            }
-            s += '[status='+status+']\n';
-            alert(s);
-            */
-        }, "json")
-            .fail(function (jqXHR, status, error) {
-                alert("Initialization failed! "+error);
-            })
-    });
-    /*
-    $("#sdk-asset").click(function() {
-        if (access_token == null) {
-            alert("You must authenticate first!");
-            return false;
-        }
-        console.log("Going to call init!");
-        APP.SDK.init($, {
-                domain: "hari.timeli.io",
-                port: 443,
-                https: true,
-                client_token: access_token
-            },
-            function () {
-                APP.SDK.Asset.get(function (e, r) {
-                    console.log(e, r);
-                });
-            });
-    });
-    */
-    $("#sdk-asset").click(function() {
-        if (!timeli_initialized) {
-            alert("You must initialize the SDK first!");
-            return false;
-        }
-        APP.SDK.Asset.add("meter100", "asia/mumbai", {description:"hello,world"}, function (e, r) {
-            if (e == null) {
-                //logPara();
-                logMsg(JSON.stringify(r));
-            }
-            else {
-                logMsg(JSON.stringify(e));
-            }
-        });
-    });
-
-    $("#test-log").click(function() {
-        getFunctionArguments(logMsg)
-        /*for (var i in APP.SDK.Asset) {
-            //logMsg(">> "+i+","+typeof(APP.SDK.Asset[i]));
-            if ((APP.SDK.Asset.hasOwnProperty(i)) &&  (typeof(APP.SDK.Asset[i]) == "function")) {
-                logMsg(i);
-            };
-        }
-        logPara();*/
     });
 
     $("input[name=command]").keyup(function(e) {
         if (e.keyCode == 13) {
-            logMsg($(this).val());
+            logMsg("INFO", $(this).val());
         }
     });
 
@@ -393,7 +243,7 @@ $(document).ready(function() {
 
     $(".reset-recording").click(function() {
         recorded_script = [];
-        logMsg("Recording has been reset.")
+        logMsg("INFO", "Recording has been reset.")
     });
 
     $(".save-recording").click(function() {
@@ -409,7 +259,7 @@ $(document).ready(function() {
                         ele.find('textarea').remove();
                         ele.find('.popupsave').remove();
                         ele.prepend("<p>Your test script has been saved as: '"+name+"'</p>");
-                        logMsg("Test script saved as: '"+name+"'");
+                        logMsg("INFO", "Test script saved as: '"+name+"'");
                     }
                 }, "json");
             });
@@ -418,6 +268,32 @@ $(document).ready(function() {
         else {
             showPopup($("<p>No recording to save</p>"));
         }
+    });
+
+    $(".run-recording").click(function() {
+        var ele = $('div.get').clone();
+        ele.find('.popupget').text("Run");
+        ele.find('.popupget').click(function() {
+            var name = ele.find('input[name=name]').val();
+            $.get("/get", {name:name}, function(resp) {
+                if (resp.status == "success") {
+                    var full_script;
+                    if (resp.content_type && (resp.content_type == "array")) {
+                        full_script = JSON.stringify(resp.content);
+                    }
+                    else {
+                        full_script = resp.content;
+                    }
+                    $('textarea[name=code]').val('');
+                    $('textarea[name=code]').val(full_script);
+                    $('input[name=script_name_for_code]').val(name);
+                    hidePopup();
+                    $('.run-button').trigger("click");
+
+                }
+            }, "json");
+        });
+        showPopup(ele);
     });
 
     showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
@@ -434,7 +310,13 @@ function getVersionsToTest() {
         }
     }
     else {
-        versions.push(current_version);
+        if (current_version != null) {
+            versions.push(current_version);
+        }
+    }
+    if (versions.length == 0) {
+        logMsg("ERROR", "No versions selected!");
+        return null;
     }
     return versions;
 }
@@ -454,19 +336,36 @@ function getSelectedResource(resource, ver) {
 }
 
 
-function logMsg(str) {
-    logPara()
-    $("#log p:last-child").html($("#log p:last-child").html()+str+"<br>");
+function logMsg(type, str) {
+    switch(type.toUpperCase()) {
+        case "INFO":
+            str = '[INFO] '+str+'<br>';
+            break;
+        case "RESULT":
+            addEmptyLine();
+            str = str +'<br>';
+            break;
+        case "ERROR":
+            addEmptyLine();
+            str = '<p align="left" style="color:red">'+'[ERROR] '+str+'</p><br>';
+            addEmptyLine();
+            break;
+        case "START":
+            addEmptyLine();
+            str = str;
+            break;
+        case "CONTINUE":
+            break;
+        case "END":
+            str = str +"<br>";
+            break;
+        default: break;
+    }
+    $("#log p:last-child").html($("#log p:last-child").html()+str);
     scroll();
 }
 
-function logError(str) {
-    logPara();
-    $("#log").append('<p align="left" style="color:red">'+str+'</p><br>');
-    scroll();
-}
-
-function logPara() {
+function addEmptyLine() {
     $("#log").append('<p align="left"></p>');
 }
 
@@ -488,11 +387,10 @@ function getFunctionArguments(f) {
 
 function generalcb(e, r) {
     if (e == null) {
-        //logPara();
-        logMsg(JSON.stringify(r));
+        logMsg("RESULT", JSON.stringify(r));
     }
     else {
-        logMsg(JSON.stringify(e));
+        logMsg("ERROR", JSON.stringify(e));
     }
 }
 
@@ -506,110 +404,10 @@ $(document).ajaxStop(function () {
     $('#busy').hide();
 });
 
-/*
-function runCode(code) {
-    var lines = code.split('\n');
-    var lineno = 0;
-    var errormsg = '';
-    var nVar = {};
 
-    lines.forEach(function(line, index, array) {
-        lineno++;
-        var z = line.split(/=(.+)?/);
-        if (z.length ==1) { // no assignment
-            executeStatement(z[0], false, function(ret) {
-                logPara();
-                if (!ret.run) {
-                    logMsg('[Error] in line no: ['+lineno+'] - '+ret.msg);
-                }
-                else {
-                    logMsg('> ' + ret.msg);
-                }
-            });
-        }
-        else if (z.length == 3) { // with assignment
-            executeStatement(z[1], true, function(ret) {
-                logPara();
-                if (!ret.run) {
-                    logMsg('[Error] in line no: ['+lineno+'] - '+ret.msg);
-                }
-                else {
-                    logMsg('> ' + ret.msg);
-                }
-                nVar[z[0].trim()] = ret;
-                logMsg(JSON.stringify(nVar[z[0].trim()]));
-            });
-        }
-        else { // not sure what this can be
-            logMsg('[Error] in line no: ['+lineno+'] - cannot parse statement.');
-        }
-    });
+function hidePopup() {
+    $.colorbox.close();
 }
-*/
-
-
-
-/*function executeStatement(code, ret, cb) {
-
-    var p = code.trim().match(/^(.*)\((.*)\)/);
-    if ((p == null) || (p.length != 3)) {
-        cb({run:false, msg: "syntax error"});
-        return;
-    }
-    var errormsg = '';
-
-    // get resource and method
-    var q = p[1].trim().split(' ');
-    if (q.length != 2) {
-        errormsg = 'either resource or method is not specified.';
-        cb({run:false, msg: errormsg});
-        return;
-    }
-
-    var resource = q[0].trim();
-    var method = q[1].trim();
-
-    if (typeof(APP.SDK[resource]) != 'object') {
-        errormsg = 'resource type "'+resource+'" is not known.';
-        cb({run:false, msg: errormsg});
-        return;
-    }
-
-    if (typeof(APP.SDK[resource][method]) != 'function') {
-        errormsg = 'method "'+method+'" does not exist for resource "'+resource+'"';
-        cb({run:false, msg: errormsg});
-        return;
-    }
-
-    var args = null;
-
-    try {
-        args = eval('[' + p[2].trim() + ']');
-    }
-    catch(err) {
-        errormsg = 'error parsing arguments for method "'+method+'" of resource "'+resource+'"';
-        cb({run:false, msg: errormsg});
-    }
-    var statement = resource + ' ' + method + ' ' + '('+p[2].trim()+')';
-    if (!ret) {
-        args.push(generalcb);
-    }
-    else {
-        args.push(function(e, r) {
-            if (e == null) {
-                cb({run:true, msg:statement, value:r});
-            }
-            else {
-                cb({run:false, msg:e, value:null});
-            }
-        });
-    }
-    APP.SDK[resource][method].apply(this, args);
-    if (!ret) {
-        cb({run: true, msg: statement});
-    }
-
-}*/
 
 function showPopup(ele) {
     if (!ele) {
@@ -748,7 +546,7 @@ function getResources(o) {
 
 function login(ver) {
     if ($.isEmptyObject(sdk[ver].sdk)) {
-        logMsg('[Error] Initialization attempted for unknown version!');
+        logMsg('ERROR', 'Initialization attempted for unknown version!');
         return;
     }
     if (!sdk[ver].sdk.APP.SDK.initialized) {
@@ -764,11 +562,11 @@ function login(ver) {
                         },
                         function () {
                             current_version = ver;
-                            logMsg("Version '"+ver+"' initialized!");
+                            logMsg("INFO", "Version '"+ver+"' initialized!");
                         });
                 }
                 else {
-                    logMsg("Initializaton of version '"+ver+"' failed: "+data.message);
+                    logMsg("ERROR", "Initializaton of version '"+ver+"' failed: "+data.message);
                 }
             }
         }, "json")
@@ -790,8 +588,12 @@ function reloadSDK()
 function execute(versions, data, isScript, cb, results) {
     var ver;
     results = results || [];
+    if (results.length == 0) {//original entry
+        logMsg("START", "Running version...");
+    }
     var data_copy = data.slice();
     if (versions.length == 0) {
+        logMsg("END", "done");
         if (cb && (typeof(cb) == 'function')) {
             cb(results);
         }
@@ -799,7 +601,7 @@ function execute(versions, data, isScript, cb, results) {
     }
     else {
         ver = versions.pop();
-        logMsg("Running version "+ver);
+        logMsg("CONTINUE", ver+"...");
     }
     if (!isScript) {
 
@@ -840,14 +642,14 @@ function runScriptArray(versions, scripts) {
 
 function evaluateResults(results) {
     if (results.length == 0) {
-        logMsg("No results returned.");
+        //logMsg("INFO", "No values returned.");
     }
     else if (results.length == 1) {
         if (results[0].e == null) {
-            logMsg(JSON.stringify(results[0].r));
+            logMsg("RESULT", JSON.stringify(results[0].r));
         }
         else {
-            logError(JSON.stringify(results[0].e));
+            logMsg("ERROR", JSON.stringify(results[0].e));
         }
     }
     else {
@@ -909,9 +711,9 @@ function evaluateResults(results) {
                 }
             }
         }
-        logMsg("Test "+(passed ? "passed" : "failed"))
+        logMsg("INFO", "Test "+(passed ? "passed" : "failed"))
         if (!passed) {
-            logError(message);
+            logMsg("ERROR", message);
         }
     }
 }
@@ -928,7 +730,7 @@ function do_record(resource, method, vals) {
     });
     script = script.replace(/,$/,'');
     script += ")'";
-    logMsg(script);
+    //logMsg("INFO","Recorded: >"+script);
     recorded_script.push(script);
 }
 
