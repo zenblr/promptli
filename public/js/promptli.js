@@ -612,7 +612,14 @@ function execute(versions, data, isScript, cb, results) {
             data = data_copy;
             execute(versions, data, isScript, cb, results);
         });
-        resource[method].apply(resource, data);
+        try {
+            resource[method].apply(resource, data);
+        }
+        catch (error) {
+            results.push({e: error.message,r:null,v:ver});
+            execute(versions, data, isScript, cb, results);
+        }
+
     }
     else {
         runScript(sdk[ver].sdk.APP.SDK, data, null, 1, function (ret) {
