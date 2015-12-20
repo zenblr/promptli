@@ -2,7 +2,7 @@ body {
   padding-top: 50px;
 }
 .starter-template {
-  padding: 40px 15px;
+  padding: 20px 15px;
   text-align: center;
 }
 hr {
@@ -55,7 +55,7 @@ hr {
   margin-bottom: 20px;
   margin-left: auto;
   margin-right: auto;
-  margin-top: 20px;
+  margin-top: 10px;
   width:50%;
 }
 .code-input-box {
@@ -71,4 +71,47 @@ hr {
   border: solid 1px #000;
   border-radius: 50%;
   vertical-align:middle;
+}
+
+.pin {
+  width: 20px;
+  height: 20px;
+  border: solid 1px #000;
+  border-radius: 50%;
+  vertical-align:middle;
+  font-size:12px;
+  text-align:center;
+
+}
+
+.unpinned .pin {
+  color:white;
+  background-color: green;
+}
+
+.pinned .pin {
+  color:white;
+  background-color: red;
+}
+
+.list-of-scripts table th:first-child, .list-of-scripts td:first-child {
+  width:200px;
+}
+.list-of-scripts table th:nth-child(2), .list-of-scripts td:nth-child(2) {
+  width:400px;
+}
+a {
+  cursor:pointer;
+}
+
+.container button:not(.roundbutton) {
+  width:150px;
+}
+
+.recorded-results table th, .recorded-results td {
+  width:300px;
+}
+
+.hide {
+  display:none;
 }

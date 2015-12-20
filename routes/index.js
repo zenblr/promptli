@@ -99,7 +99,25 @@ router.get('/:ask', function(req, res, next) {
                 }
             });
             break;
-
+        case 'get_all':
+            res.setHeader('Content-Type', 'application/json');
+            var name = req.query.name;
+            var scripts = [];
+            db.tests.find().forEach(function(err, script) {
+                if (!err) {
+                    if (script) {
+                        scripts.push({name: script.name, description:script.desc});
+                    }
+                    else {
+                        res.send({status: 'success', scripts:scripts});
+                        res.end();
+                    }
+                } else {
+                    res.send({status:'failed', message:"failed to get scripts"});
+                    res.end();
+                }
+            });
+            break;
         default:
             if (next) {
                 var err = new Error('Not Found');

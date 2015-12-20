@@ -12,6 +12,8 @@ var current_version = null;
 var in_regression_mode = false;
 var in_recording_mode = false;
 var recorded_script = [];
+var recorded_results = [];
+var playback_results = [];
 
 $(document).ready(function() {
 
@@ -24,23 +26,22 @@ $(document).ready(function() {
     });
     $('.version').change(function() {
         var v = $(this).val();
+        in_regression_mode = false;
         if ((v != 0) && (v != 'a')) {
             if (current_version != v) {
                 login(v);
-            }
-            if ($('input[name=mode]').prop("checked")) {
-                $('input[name=mode]').prop("checked", false).change();
+                logMsg("INFO", "Switching to version '"+v+"'");
             }
         }
         else if (v == 'a') {
-            $('input[name=mode]').prop("checked", true).change();
-        }
-        else {
-            if ($('input[name=mode]').prop("checked")) {
-                $('input[name=mode]').prop("checked", false).change();
+            in_regression_mode = true;
+            logMsg("INFO", 'Switching to regression mode testing');
+            for (var ver in sdk) {
+                if (sdk.hasOwnProperty(ver)) {
+                    login(ver);
+                }
             }
         }
-
     });
 
     $('.resources').change(function() {
@@ -78,8 +79,14 @@ $(document).ready(function() {
                 var name = prefix + args[i];
                 $('.params').append($('<label for="' + name + '">' + args[i] + '</label>'));
                 $('.params').append($('<input type="text" value="" name="' + name + '">'));
+                if ((in_recording_mode) && (recorded_results.length > 0)) {
+                    $('.params').append($('<a class="select-value">[select]</a>'));
+                }
                 $('.params').append($('<br>'));
             }
+            $('.params .select-value').click(function() {
+               popupRecordedResults($(this).prev());
+            });
             $('.code-box').hide();
             $('.go-box').show();
         }
@@ -139,7 +146,10 @@ $(document).ready(function() {
     });
 
     $('.run-button').click(function() {
-        var versions = getVersionsToTest();
+        var text = $('textarea[name=code]').val().trim();
+        executeTextScript(text);
+        //getAndRunScript(text);
+        /*var versions = getVersionsToTest();
         if (versions == null) {
             return;
         }
@@ -168,11 +178,13 @@ $(document).ready(function() {
                     evaluateResults(results);
                 });
             }
-        }
+        }*/
     });
 
     $('.go-button').click(function() {
-        $('.show-box').hide();
+        if ($('.show-box').find('.pin-control').hasClass('unpinned')) {
+            $('.show-box').hide();
+        }
         var vals = [];
         $('.go-box input').each(function() {
             var val = $(this).val().trim();
@@ -186,8 +198,9 @@ $(document).ready(function() {
             return;
         }
         if (in_recording_mode) {
-            do_record($('.resources').val(),$('.methods').val(), vals);
+            vals = do_record($('.resources').val(),$('.methods').val(), vals);
         }
+        playback_results = [];
         execute(versions, vals, false, function(results) {
             evaluateResults(results);
         });
@@ -201,7 +214,7 @@ $(document).ready(function() {
         $('#log').empty().append('<p align="left"></p>');
     });
 
-    $('input[name=mode]').change(function() {
+    /*$('input[name=mode]').change(function() {
         if ($(this).is(':checked')) {
             in_regression_mode = true;
             logMsg("INFO", 'Switching to regression mode testing');
@@ -217,7 +230,7 @@ $(document).ready(function() {
             $(".version").val(current_version);
             logMsg("INFO", 'Switching to regular mode testing with version: '+current_version);
         }
-    });
+    });*/
 
     $("input[name=command]").keyup(function(e) {
         if (e.keyCode == 13) {
@@ -243,6 +256,7 @@ $(document).ready(function() {
 
     $(".reset-recording").click(function() {
         recorded_script = [];
+        recorded_results = [];
         logMsg("INFO", "Recording has been reset.")
     });
 
@@ -273,9 +287,29 @@ $(document).ready(function() {
     $(".run-recording").click(function() {
         var ele = $('div.get').clone();
         ele.find('.popupget').text("Run");
+        ele.append($('div.list-of-scripts').clone());
+        ele.find('.list-of-scripts table').hide();
+        ele.find('.all-scripts').click(function() {
+            var _this = $(this);
+            $.get("/get_all", {}, function(resp) {
+                if (resp.status == "success") {
+                    resp.scripts.forEach(function(s) {
+                        var row = '<td>'+'<a class="script-name">'+s.name+'</a></td><td>'+ s.description+'</td>';
+                        _this.parent().next().append('<tr>'+row+'</tr>');
+                    });
+                    _this.parent().next().find('.script-name').click(function() {
+                       getAndRunScript($(this).text());
+                       hidePopup();
+                    });
+                    _this.parent().next().show();
+                }
+            }, "json");
+        });
         ele.find('.popupget').click(function() {
             var name = ele.find('input[name=name]').val();
-            $.get("/get", {name:name}, function(resp) {
+            getAndRunScript(name);
+            hidePopup();
+            /*$.get("/get", {name:name}, function(resp) {
                 if (resp.status == "success") {
                     var full_script;
                     if (resp.content_type && (resp.content_type == "array")) {
@@ -291,14 +325,73 @@ $(document).ready(function() {
                     $('.run-button').trigger("click");
 
                 }
-            }, "json");
+            }, "json");*/
         });
-        showPopup(ele);
+        showPopup(ele, {width:700});
+    });
+
+    $('.pin-control').click(function() {
+       if ($(this).hasClass('pinned')) {
+            $(this).removeClass('pinned').addClass('unpinned');
+            $(this).find('.pin').text('P');
+       }
+        else {
+           $(this).removeClass('unpinned').addClass('pinned');
+           $(this).find('.pin').text('U');
+       }
     });
 
     showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
 
 });
+
+function getAndRunScript(name) {
+    $.get("/get", {name:name}, function(resp) {
+        if (resp.status == "success") {
+            var script;
+            if (resp.content_type && (resp.content_type == "array")) {
+                script = JSON.stringify(resp.content);
+            }
+            else {
+                script = resp.content;
+            }
+            logMsg("INFO", "Running script '"+name+"'...");
+            executeTextScript(script);
+        }
+    }, "json");
+}
+
+function executeTextScript(text) {
+    if (in_recording_mode) {
+        $(".recording:not(.roundbutton)").trigger("click");
+    }
+    playback_results = [];
+    var versions = getVersionsToTest();
+    if (versions == null) {
+        return;
+    }
+    var cmds;
+    if ((text.charAt(0) == '[') &&  (text.charAt(text.length -1) == ']')) {
+        cmds = JSON.parse(text);
+        cmds.reverse();
+        runScriptArray(versions, cmds);
+    }
+    else {
+        try {
+            cmds = eval('[' + text + ']');
+        }
+        catch (error) {
+            logMsg("ERROR", error.message);
+            return;
+        }
+        cmds.reverse();
+        if (cmds.length > 0) {
+            execute(versions, cmds, true, function(results) {
+                evaluateResults(results);
+            });
+        }
+    }
+}
 
 function getVersionsToTest() {
     var versions =  [];
@@ -409,7 +502,7 @@ function hidePopup() {
     $.colorbox.close();
 }
 
-function showPopup(ele) {
+function showPopup(ele, opt) {
     if (!ele) {
         return;
     }
@@ -418,10 +511,13 @@ function showPopup(ele) {
         $.colorbox.close();
     });
 
+    var width = opt && opt.width ? opt.width : 500;
+    var height = opt && opt.height ? opt.height : 200;
+
     $.colorbox({
         html: ele,
-        width: 500,
-        height: 200
+        width: width,
+        height: height
     });
 }
 
@@ -465,6 +561,13 @@ function run(sdk, code, cb) {
 
             if (typeof(resource[method]) != 'function') {
                 reject(new Error('method "' + method + '" does not exist for resource "' + resource_name + '"'));
+            }
+
+            try {
+                strargs = fixArgumentReferences(strargs);
+            }
+            catch (err) {
+                reject(err);
             }
 
             var args = [];
@@ -723,22 +826,208 @@ function evaluateResults(results) {
             logMsg("ERROR", message);
         }
     }
+    if (in_recording_mode) {
+        recorded_results.push(results);
+    }
+    else {
+        playback_results.push(results);
+    }
 }
 
 function do_record(resource, method, vals) {
+    var newvals = [];
     var script = "'"+resource+"."+method+"(";
     vals.forEach(function(v) {
         if (typeof(v) == "string") {
-            script += '"'+v+'",';
+            var m = v.match(/(.*)\/\/\$\{(.*)\}$/);
+            if (m == null) {
+                script += '"'+v+'",';
+                newvals.push(v);
+            }
+            else {
+                script += '"${'+m[2]+'}",';
+                newvals.push(m[1]);
+            }
         }
         else if (typeof(v) == "object") {
             script += JSON.stringify(v)+',';
+            newvals.push(v);
         }
     });
     script = script.replace(/,$/,'');
     script += ")'";
     //logMsg("INFO","Recorded: >"+script);
     recorded_script.push(script);
+    return newvals;
 }
 
+/*function popupRecordedResults() {
+    var ele = $('div.recorded-results').clone();
+    var tab = ele.find('table');
+    var headers = [];
+    var row = '';
+    for (var ver in sdk) {
+        if (sdk.hasOwnProperty(ver)) {
+            row = row + '<th>'+ver+'</th>';
+            headers.push(ver);
+        }
+    }
+    tab.append('<tr>'+row+'</tr>');
 
+    var k = 0;
+    recorded_results.forEach(function(results) {
+        var values = [];
+        var len = values.length;
+        row = '';
+        for (var i=0; i<headers.length; i++) {
+            for (var j=0; j<results.length; j++) {
+                if (headers[i] == results[j].v) {
+                    values.push(results[j].r);
+                    break;
+                }
+            }
+            if (values.length == len) {
+                values.push(null);
+                row = row + '<td>'+''+'</td>';
+            }
+            else {
+                row = row + '<td>'+recorded_script[k]+'</td>';
+            }
+            len++;
+        }
+        k++;
+        tab.append('<tr>'+row+'</tr>');
+    });
+    showPopup(ele, {width:700});
+}*/
+function popupRecordedResults(inp) {
+    var ele = $('div.recorded-results').clone();
+    var headers = [];
+    for (var ver in sdk) {
+        if (sdk.hasOwnProperty(ver)) {
+            headers.push(ver);
+        }
+    }
+    var expand = '<a class="adjust">&nbsp;&nbsp;+</a>';
+    var collapse = '<a class="adjust">&nbsp;&nbsp;-</a>';
+
+    var html = '';
+
+    for  (var i=0; i<recorded_results.length; i++) {
+        var cls = 'r-' + i;
+        html += '<li>' + recorded_script[i] + '<ul class="' + cls + '">';
+        for (var j = 0; j < recorded_results[i].length; j++) {
+            var ncls = cls + '-' + j
+            html += '<li>' + recorded_results[i][j].v + collapse + '<ul class="' + ncls + '">';
+            ncls = ncls + '-r';
+            html = getResultsAsTreeElements(recorded_results[i][j].r, ncls, html);
+            html += '</ul></li>';
+        }
+        html += '</ul></li>';
+    }
+    ele.find('ul:first').append(html);
+    ele.find('.adjust').click(function() {
+        var ul = $(this).next();
+        if (ul.length > 0) {
+            if (ul.hasClass('hide')) {
+                ul.removeClass('hide');
+                $(this).html('&nbsp;&nbsp;-');
+            }
+            else {
+                ul.addClass('hide');
+                $(this).html('&nbsp;&nbsp;+');
+            }
+        }
+    });
+    ele.find('.sel').click(function() {
+        var id = convertToIdentifier($(this).parent().attr("class"));
+        var val = $(this).parent().text();
+        var m = val.match(/^.*=\"(.*)\".*$/);
+        if (m != null) {
+            inp.val(m[1]+"//"+id);
+        }
+        else {
+            input.val(" selection failed");
+        }
+        hidePopup();
+    });
+    showPopup(ele, {width:700, height:500});
+}
+
+function getResultsAsTreeElements(r, cls, html) {
+
+    var expand = '<a class="adjust">&nbsp;&nbsp;+</a>';
+    var collapse = '<a class="adjust">&nbsp;&nbsp;-</a>';
+    var sel = '<a class="sel">select</a>';
+
+    if ((typeof(r) == "boolean") ||
+        (typeof(r) == "number") ||
+        (typeof(r) == "string")) {
+        html += '<li class="'+cls+'">'+r+sel+'</li>';
+    }
+    else if (Array.isArray(r)) {
+        html += '<li>['+ r.length + ']'+collapse;
+        html += '<ul class="'+cls+'">';
+        for (var i=0; i< r.length; i++) {
+            var ncls = cls + '-' + i;
+            html += '<li>'+i+collapse;
+            html += '<ul class="'+ncls+'">';
+            html = getResultsAsTreeElements(r[i], ncls, html);
+            html += '</ul></li>';
+        };
+        html += '</ul></li>';
+    }
+    else if (typeof(r) == "object") {
+        for (var key in r) {
+            if (r.hasOwnProperty(key)) {
+                html += '<li class="'+cls+'-'+key+'">['+key+']='+JSON.stringify(r[key])+sel+'</li>';
+            }
+        }
+    }
+    return html;
+}
+
+function convertToIdentifier(str) {
+    var ids = str.split('-');
+    var identifier = '${r';
+    if (ids != null) {
+        for (var i=0; i<ids.length; i++) {
+            if ((i==0) && (ids[i] == 'r')) {
+                continue;
+            }
+            if (!isNaN(ids[i])) {
+                identifier += '['+ids[i]+']';
+            }
+            else {
+                identifier += '.'+ids[i];
+            }
+        };
+    }
+    identifier += '}';
+    return identifier;
+}
+
+function fixArgumentReferences(str) {
+    var re = /\$\{(.*?)\}/g;
+    var r = playback_results;
+    var orig = [];
+    var conv = [];
+    var m;
+    do {
+        m = re.exec(str);
+        if (m) {
+            try {
+                conv.push(eval(m[1]));
+            }
+            catch(error) {
+                throw new Error("Error evaluating: "+m[1]+"-"+error.message);
+            }
+            orig.push(m[1]);
+        }
+    } while (m);
+    re = /\$\{(.*?)\}/;
+    for (var i=0; i<orig.length; i++) {
+        str = str.replace("${"+orig[i]+"}",conv[i]);
+    }
+    return str;
+}

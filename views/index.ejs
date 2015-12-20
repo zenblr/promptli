@@ -63,7 +63,7 @@
                  <option value="0">None</option>
                  <option value="v1">Version 1</option>
                  <option value="v2">Version 2</option>
-                 <option value="a">All Versions</option>
+                 <option value="a">Regression Mode</option>
              </select>
               <label>Select Resource</label>
               <select class="resources">
@@ -91,6 +91,7 @@
           <input type="text" name="command" value="">-->
          </div>
           <div class="show-box go-box">
+              <a class="pin-control unpinned"><div class="pin">P</div></a>
             <p style="margin:10px;text-align:center;">Please enter values for method arguments. <br> Enter ALL values or NONE. Click 'Go' when done.</p>
             <div class="centered params" style="margin-top:20px;"></div>
               <div align="center">
@@ -100,8 +101,8 @@
           </div>
           <div id="busy" style="display:none"><img src="/images/loading.gif"></div>
           <button class="clear-transcript">Clear Transcript</button>
-          <input style="margin-right:5px; margin-left:100px;vertical-align:top;" type="checkbox" name="mode" value="mode">Use Regression Mode
-          <button class="recording" style="margin-left:100px;">Start Recording</button>
+          <!--<input style="margin-right:5px; margin-left:100px;vertical-align:top;" type="checkbox" name="mode" value="mode">Use Regression Mode-->
+          <button class="recording" style="margin-left:50px;">Start Recording</button>
           <button class="recording roundbutton"></button>
           <button class="reset-recording" style="margin-left:50px;">Reset Recording</button>
           <button class="save-recording" style="margin-left:50px;">Save Recording</button>
@@ -127,6 +128,18 @@
             <p></p>
             <button class="popupOK">OK</button>
             <button class="xbutton">Cancel</button>
+        </div>
+        <div class="list-of-scripts">
+            <p><a class="all-scripts">List All</a></p>
+            <table border="1">
+                <tr>
+                    <th>Name</th><th>Description</th>
+                </tr>
+            </table>
+        </div>
+        <div class="recorded-results">
+            <ul>
+            </ul>
         </div>
     </div>
 
