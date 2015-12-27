@@ -265,6 +265,10 @@ $(document).ready(function() {
             var ele = $('div.save').clone();
             ele.find('.popupsave').click(function() {
                 var name = ele.find('input[name=name]').val();
+                if (name == '') {
+                    ele.find('.error-msg').text('Name field should not be empty');
+                    return;
+                }
                 var desc = ele.find('textarea[name=description]').val();
                 var content = JSON.stringify(recorded_script);
                 $.post("/save", {name:name, description:desc, content:content, content_type:"array"}, function(resp) {
@@ -272,6 +276,7 @@ $(document).ready(function() {
                         ele.find('input').remove();
                         ele.find('textarea').remove();
                         ele.find('.popupsave').remove();
+                        ele.find('p').remove();
                         ele.prepend("<p>Your test script has been saved as: '"+name+"'</p>");
                         logMsg("INFO", "Test script saved as: '"+name+"'");
                     }
@@ -513,11 +518,13 @@ function showPopup(ele, opt) {
 
     var width = opt && opt.width ? opt.width : 500;
     var height = opt && opt.height ? opt.height : 200;
+    var onClosed = opt && opt.onClosed ? opt.onClosed : function() {};
 
     $.colorbox({
         html: ele,
         width: width,
-        height: height
+        height: height,
+        onClosed: onClosed
     });
 }
 
@@ -910,15 +917,17 @@ function popupRecordedResults(inp) {
     }
     var expand = '<a class="adjust">&nbsp;&nbsp;+</a>';
     var collapse = '<a class="adjust">&nbsp;&nbsp;-</a>';
+    var del = '<a class="del">delete</a>';
+    var deleted_indices = [];
 
     var html = '';
 
     for  (var i=0; i<recorded_results.length; i++) {
         var cls = 'r-' + i;
-        html += '<li>' + recorded_script[i] + '<ul class="' + cls + '">';
+        html += '<li><div>' + recorded_script[i] + del+'</div><ul class="' + cls + '">';
         for (var j = 0; j < recorded_results[i].length; j++) {
             var ncls = cls + '-' + j
-            html += '<li>' + recorded_results[i][j].v + collapse + '<ul class="' + ncls + '">';
+            html += '<li><div>' + recorded_results[i][j].v + collapse + '</div><ul class="' + ncls + '">';
             ncls = ncls + '-r';
             html = getResultsAsTreeElements(recorded_results[i][j].r, ncls, html);
             html += '</ul></li>';
@@ -927,7 +936,7 @@ function popupRecordedResults(inp) {
     }
     ele.find('ul:first').append(html);
     ele.find('.adjust').click(function() {
-        var ul = $(this).next();
+        var ul = $(this).parent().next();
         if (ul.length > 0) {
             if (ul.hasClass('hide')) {
                 ul.removeClass('hide');
@@ -940,8 +949,8 @@ function popupRecordedResults(inp) {
         }
     });
     ele.find('.sel').click(function() {
-        var id = convertToIdentifier($(this).parent().attr("class"));
-        var val = $(this).parent().text();
+        var id = convertToIdentifier($(this).parent().parent().attr("class"));
+        var val = $(this).parent().parent().text();
         var m = val.match(/^.*=\"(.*)\".*$/);
         if (m != null) {
             inp.val(m[1]+"//"+id);
@@ -951,7 +960,19 @@ function popupRecordedResults(inp) {
         }
         hidePopup();
     });
-    showPopup(ele, {width:700, height:500});
+    ele.find('.del').click(function() {
+        var li = $(this).parent().parent();
+        var ul = $(this).parent().next();
+        var index = parseInt(ul.attr('class').replace('r-',''));
+        deleted_indices.push(index);
+        li.remove();
+    });
+    showPopup(ele, {width:700, height:500, onClosed:function() {
+        deleted_indices.sort(function(a, b){return b-a});
+        deleted_indices.forEach(function(v) {
+          recorded_results.splice(v,1);
+        });
+    }});
 }
 
 function getResultsAsTreeElements(r, cls, html) {
@@ -963,14 +984,14 @@ function getResultsAsTreeElements(r, cls, html) {
     if ((typeof(r) == "boolean") ||
         (typeof(r) == "number") ||
         (typeof(r) == "string")) {
-        html += '<li class="'+cls+'">'+r+sel+'</li>';
+        html += '<li class="'+cls+'"><div>'+r+sel+'</div></li>';
     }
     else if (Array.isArray(r)) {
-        html += '<li>['+ r.length + ']'+collapse;
+        html += '<li><div>['+ r.length + ']'+collapse+'</div>';
         html += '<ul class="'+cls+'">';
         for (var i=0; i< r.length; i++) {
             var ncls = cls + '-' + i;
-            html += '<li>'+i+collapse;
+            html += '<li><div>'+i+collapse+'</div>';
             html += '<ul class="'+ncls+'">';
             html = getResultsAsTreeElements(r[i], ncls, html);
             html += '</ul></li>';
@@ -980,7 +1001,7 @@ function getResultsAsTreeElements(r, cls, html) {
     else if (typeof(r) == "object") {
         for (var key in r) {
             if (r.hasOwnProperty(key)) {
-                html += '<li class="'+cls+'-'+key+'">['+key+']='+JSON.stringify(r[key])+sel+'</li>';
+                html += '<li class="'+cls+'-'+key+'"><div>['+key+']='+JSON.stringify(r[key])+sel+'</div></li>';
             }
         }
     }

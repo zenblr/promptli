@@ -115,3 +115,41 @@ a {
 .hide {
   display:none;
 }
+
+/*
+credit: David Thomas
+http://stackoverflow.com/questions/14423671/best-method-for-displaying-a-tree-list-using-css-only-no-images-or-js-example
+*/
+.recorded-results ul {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+  position: relative;
+}
+.recorded-results li {
+  list-style-type: none;
+  border-left: 2px solid #000;
+  margin-left: 1em;
+}
+.recorded-results li div {
+  padding-left: 1em;
+  position: relative;
+}
+.recorded-results li div::before {
+  content:'';
+  position: absolute;
+  top: 0;
+  left: -2px;
+  bottom: 50%;
+  width: 0.75em;
+  border: 2px solid #000;
+  border-top: 0 none transparent;
+  border-right: 0 none transparent;
+}
+.recorded-results ul > li:last-child {
+  border-left: 2px solid transparent;
+}
+
+.error-msg {
+  color:red;
+}
