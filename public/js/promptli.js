@@ -4,7 +4,7 @@
 
 var sdk = {
     'v1':{'domain':'volume.timeli.io', sdk:{}},
-    'v2':{'domain':'volume.timeli-staging.com', sdk:{}}
+    'v2':{'domain':'volume.timeli.io', sdk:{}}
 }
 
 var g = {};
@@ -668,7 +668,7 @@ function login(ver) {
                             port: 443,
                             https: true,
                             client_token: data.access_token,
-                            version2: ver == 'v2' ? false : false
+                            version2: ver == 'v2' ? true : false
                         },
                         function () {
                             current_version = ver;
@@ -917,7 +917,7 @@ function popupRecordedResults(inp) {
     }
     var expand = '<a class="adjust">&nbsp;&nbsp;+</a>';
     var collapse = '<a class="adjust">&nbsp;&nbsp;-</a>';
-    var del = '<a class="del">delete</a>';
+    var del = '<a class="del">[ delete this ]</a>';
     var deleted_indices = [];
 
     var html = '';

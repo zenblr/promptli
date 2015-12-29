@@ -144,7 +144,7 @@ var creds = {'v1':{
                     'password':null
                   },
              'v2':{
-                    'domain':"volume.timeli-staging.com",
+                    'domain':"volume.timeli.io",
                     'client':"e464c2f8-42f8-45e9-ade2-a152a3c93ea1",
                     'secret':"volume1secret",
                     'redirect_uri':"http://fiddle.jshell.net",
@@ -190,7 +190,8 @@ function authenticateClient(version, cb) {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': Buffer.byteLength(data),
-                'Accept': "application/json; charset=utf-8"
+                'Accept': "application/json; charset=utf-8",
+                "X-Timeli-Version": (version == "v2" ? "2.0" : "other")
             }
         };
 
