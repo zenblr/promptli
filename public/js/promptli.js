@@ -571,7 +571,7 @@ function run(sdk, code, cb) {
             }
 
             try {
-                strargs = fixArgumentReferences(strargs);
+                strargs = fixArgumentReferences(strargs, sdk._version);
             }
             catch (err) {
                 reject(err);
@@ -926,7 +926,7 @@ function popupRecordedResults(inp) {
         var cls = 'r-' + i;
         html += '<li><div>' + recorded_script[i] + del+'</div><ul class="' + cls + '">';
         for (var j = 0; j < recorded_results[i].length; j++) {
-            var ncls = cls + '-' + j
+            var ncls = cls + '-' + '$ver';
             html += '<li><div>' + recorded_results[i][j].v + collapse + '</div><ul class="' + ncls + '">';
             ncls = ncls + '-r';
             html = getResultsAsTreeElements(recorded_results[i][j].r, ncls, html);
@@ -1019,6 +1019,9 @@ function convertToIdentifier(str) {
             if (!isNaN(ids[i])) {
                 identifier += '['+ids[i]+']';
             }
+            else if (ids[i] == '$ver') {
+                identifier += '['+ids[i]+']';
+            }
             else {
                 identifier += '.'+ids[i];
             }
@@ -1028,7 +1031,7 @@ function convertToIdentifier(str) {
     return identifier;
 }
 
-function fixArgumentReferences(str) {
+function fixArgumentReferences(str, ver) {
     var re = /\$\{(.*?)\}/g;
     var r = playback_results;
     var orig = [];
@@ -1037,16 +1040,36 @@ function fixArgumentReferences(str) {
     do {
         m = re.exec(str);
         if (m) {
-            try {
-                conv.push(eval(m[1]));
-            }
-            catch(error) {
-                throw new Error("Error evaluating: "+m[1]+"-"+error.message);
-            }
+            conv.push(m[1]);
             orig.push(m[1]);
         }
     } while (m);
-    re = /\$\{(.*?)\}/;
+    var versions = getVersionsToTest();
+    conv = conv.reduce(function(p,n) {
+                if (n.match(/\$ver/)) {
+                    m = n.match(/\[(.*?)\]/);
+                    if (m) {
+                        for (var i=0;i<versions.length; i++) {
+                            if (r[m[1]][i].v == ver) {
+                                n = n.replace(/\$ver/g,i);
+                                try {
+                                    p.push(eval(n));
+                                }
+                                catch (err) {
+                                    throw new Error("Error evaluating '"+n+"'");
+                                }
+                                return p;
+                            }
+                        }
+                        throw new Error("Could not substitute version in result template");
+                    }
+                    throw new Error("result template format incorrect");
+                }
+                else {
+                    p.push(eval(n));
+                    return p;
+                }
+    },[]);
     for (var i=0; i<orig.length; i++) {
         str = str.replace("${"+orig[i]+"}",conv[i]);
     }

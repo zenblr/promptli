@@ -159,10 +159,12 @@
     <script src="/js/sdkv2.js"></script>
     <script>
         APP.SDK.cloneInto(sdk['v2'].sdk);
+        sdk['v2'].sdk.APP.SDK._version = 'v2';
     </script>
     <script src="/js/sdkv1.js"></script>
     <script>
         APP.SDK.cloneInto(sdk['v1'].sdk);
+        sdk['v1'].sdk.APP.SDK._version = 'v1';
     </script>
   </body>
 </html>
