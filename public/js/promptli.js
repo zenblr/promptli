@@ -335,6 +335,71 @@ $(document).ready(function() {
         showPopup(ele, {width:700});
     });
 
+    $(".manage-scripts").click(function() {
+        var ele = $('div.list-of-scripts').clone();
+        ele.find('tr').append('<th>delete</th>');
+        ele.find('p').remove();
+        ele.append('<div class="buttons"><button class="popupOK">Submit</button>'+
+                   '<button class="xbutton">Cancel</button></div>');
+        $.get("/get_all", {}, function(resp) {
+            if (resp.status == "success") {
+                resp.scripts.forEach(function(s) {
+                    var row = '<td>'+'<a class="rename">'+s.name+'</a></td><td>'+ s.description+'</td><td><input type="checkbox" name="'+s.name+'">';
+                    ele.find('table').append('<tr>'+row+'</tr>');
+                });
+            }
+            ele.find('.popupOK').click(function() {
+                var names = [];
+                ele.find('input:checkbox:checked').each(function() {
+                   names.push($(this).attr('name'));
+                });
+                if (names.length == 0) {
+                    return;
+                }
+                $.post('/delete',{"names":JSON.stringify(names)}, function(d,s) {
+                    if (d && (d.status == "success")) {
+                        logMsg("INFO", "Delete command succeeded");
+                    }
+                    else {
+                        logMsg("INFO", "Delete command failed");
+                    }
+                    hidePopup();
+                }, "json");
+            });
+
+            var cb = function() {
+                var orig = $(this).text();
+                var p = $(this).parent();
+                p.find('.rename').remove();
+                p.append('<input type="text" placeholder="'+orig+'">');
+                p.find('input').focus();
+                p.find('input').keypress(function (e) {
+                    if (e.which == 13) {
+                        var val = p.find('input').val();
+                        p.find('input').remove();
+                        if (val == '') {
+                            p.append('<a class="rename">' + orig + '</a>');
+                            p.find('.rename').click(cb);
+                        }
+                        else {
+                            $.post('/rename', {"original": orig, "changed": val}, function (d, s) {
+                                if (d && (d.status == "success")) {
+                                    p.append('<a class="rename">' + val + '</a>');
+                                }
+                                else {
+                                    p.append('<a class="rename">' + orig + '</a>');
+                                }
+                                p.find('.rename').click(cb);
+                            }, "json");
+                        }
+                    }
+                });
+            }
+            ele.find('.rename').click(cb);
+        }, "json");
+        showPopup(ele, {width:700, height:500});
+    });
+
     $('.pin-control').click(function() {
        if ($(this).hasClass('pinned')) {
             $(this).removeClass('pinned').addClass('unpinned');

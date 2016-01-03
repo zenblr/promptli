@@ -72,6 +72,54 @@ router.post('/:ask', function(req, res, next) {
             res.send({status:'success'});
             res.end();
             break;
+      case 'delete':
+          res.setHeader('Content-Type', 'application/json');
+          var names = req.body.names;
+          if (names) {
+              names = JSON.parse(names);
+          }
+          if (names && (Array.isArray(names))) {
+              db.tests.remove({name:{$in:names}}, function(err, doc) {
+                if (!err) {
+                    res.send({status:'success'});
+                    res.end();
+                }
+                else {
+                    res.send({status:'failed', message:err});
+                    res.end();
+                }
+              });
+          }
+          else {
+              res.send({status:'failed', message:'no inputs provided'});
+              res.end();
+          }
+          break;
+      case 'rename':
+          res.setHeader('Content-Type', 'application/json');
+          var original = req.body.original;
+          var changed = req.body.changed;
+          if (original && changed) {
+              db.tests.findAndModify({
+                  query : {name: original},
+                  update: {$set: {name: changed}},
+                  new: false
+              }, function (err, doc) {
+                  if (!err) {
+                      res.send({status:'success'});
+                      res.end();
+                  }
+                  else {
+                      res.send({status:'failed', message:err});
+                      res.end();
+                  }
+              })
+          }
+          else {
+              res.send({status:'failed', message:'no inputs provided'});
+              res.end();
+          }
+          break;
       default:
             if (next) {
                 var err = new Error('Not Found');
