@@ -166,6 +166,9 @@ router.get('/:ask', function(req, res, next) {
                 }
             });
             break;
+        case 'run_auto':
+            res.render('index', { title: 'Express', run_auto:true });
+            break;
         default:
             if (next) {
                 var err = new Error('Not Found');

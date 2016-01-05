@@ -410,12 +410,17 @@ $(document).ready(function() {
            $(this).find('.pin').text('U');
        }
     });
+    if ((typeof(run_auto) != 'undefined') && (run_auto)) {
+        auto();
+    }
+    else {
+        showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
+    }
 
-    showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
 
 });
 
-function getAndRunScript(name) {
+function getAndRunScript(name, cb) {
     $.get("/get", {name:name}, function(resp) {
         if (resp.status == "success") {
             var script;
@@ -426,12 +431,12 @@ function getAndRunScript(name) {
                 script = resp.content;
             }
             logMsg("INFO", "Running script '"+name+"'...");
-            executeTextScript(script);
+            executeTextScript(script, cb);
         }
     }, "json");
 }
 
-function executeTextScript(text) {
+function executeTextScript(text, cb) {
     if (in_recording_mode) {
         $(".recording:not(.roundbutton)").trigger("click");
     }
@@ -444,7 +449,7 @@ function executeTextScript(text) {
     if ((text.charAt(0) == '[') &&  (text.charAt(text.length -1) == ']')) {
         cmds = JSON.parse(text);
         cmds.reverse();
-        runScriptArray(versions, cmds);
+        runScriptArray(versions, cmds, cb);
     }
     else {
         try {
@@ -458,6 +463,9 @@ function executeTextScript(text) {
         if (cmds.length > 0) {
             execute(versions, cmds, true, function(results) {
                 evaluateResults(results);
+                if (cb && (typeof(cb) == "function")) {
+                    cb();
+                }
             });
         }
     }
@@ -809,8 +817,11 @@ function execute(versions, data, isScript, cb, results) {
 }
 
 
-function runScriptArray(versions, scripts) {
+function runScriptArray(versions, scripts, cb) {
     if (scripts.length == 0) {
+        if (cb && (typeof(cb) == "function")) {
+            cb();
+        }
         return;
     }
     var versions_copy = versions.slice();
@@ -818,7 +829,7 @@ function runScriptArray(versions, scripts) {
     execute(versions, s, true, function (results) {
         evaluateResults(results);
         versions = versions_copy;
-        runScriptArray(versions, scripts);
+        runScriptArray(versions, scripts, cb);
     });
 }
 
@@ -1139,4 +1150,28 @@ function fixArgumentReferences(str, ver) {
         str = str.replace("${"+orig[i]+"}",conv[i]);
     }
     return str;
+}
+
+function auto() {
+    $('.version').val('a');
+    $('.version').trigger("change");
+    var all_scripts = [];
+    $.get("/get_all", {}, function(resp) {
+        if (resp.status == "success") {
+            resp.scripts.forEach(function (s) {
+                all_scripts.push(s.name);
+            });
+            run_all_scripts(all_scripts);
+        }
+    });
+}
+
+function run_all_scripts(scripts) {
+    if (scripts.length == 0) {
+        return;
+    }
+    var name = scripts.pop();
+    getAndRunScript(name, function() {
+        run_all_scripts(scripts);
+    });
 }
