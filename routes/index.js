@@ -6,6 +6,7 @@ logger.setLevel("DEBUG");
 var db = require('../lib/db').db;
 var eventemitter = require('events');
 var testcomplete = new eventemitter();
+var config = require('../config/config');
 var oneHour = 1 * 60 * 60 * 1000;
 
 /* GET home page. */
@@ -332,7 +333,11 @@ function is_valid_token(data) {
 
 function run_auto_quiet(name) {
     var exec = require('child_process').exec;
-    var cmd = 'firefox http://localhost:3000/run_auto?name='+name;
+    var display = '';
+    if (config.env == "production") {
+        display = 'export DISPLAY=:10;  ';
+    }
+    var cmd = display+'firefox http://localhost:3000/run_auto?name='+name;
     exec(cmd, function(error, stdout, stderr) {
     });
 }
