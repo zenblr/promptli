@@ -4,6 +4,8 @@ var log4js = require('log4js');
 var logger = log4js.getLogger("INDEX");
 logger.setLevel("DEBUG");
 var db = require('../lib/db').db;
+var eventemitter = require('events');
+var testcomplete = new eventemitter();
 var oneHour = 1 * 60 * 60 * 1000;
 
 /* GET home page. */
@@ -120,6 +122,17 @@ router.post('/:ask', function(req, res, next) {
               res.end();
           }
           break;
+      case 'save_results':
+          res.setHeader('Content-Type', 'application/json');
+          var name = req.body.name;
+          var log = req.body.log;
+          db.results.update({name:name}, {name:name,log:log}, {upsert:true}, function() {
+              testcomplete.emit(name, log);
+              console.log(">> Event "+name+"  sent...");
+              res.send({status:'success'});
+              res.end();
+          });
+          break;
       default:
             if (next) {
                 var err = new Error('Not Found');
@@ -167,7 +180,34 @@ router.get('/:ask', function(req, res, next) {
             });
             break;
         case 'run_auto':
-            res.render('index', { title: 'Express', run_auto:true });
+            var name = req.query.name;
+            name = name ? name : "default";
+            var quiet = req.query.q;
+            if (quiet && (quiet == 'y')) {
+                run_auto_quiet(name);
+                testcomplete.once(name, function(r) {
+                    console.log(">> Event "+name+"  received...");
+                    //res.setHeader('Content-Type', 'application/json');
+                    res.send(r);
+                    res.end();
+                });
+                return;
+            }
+            res.render('index', { title: 'Express', run_auto:name });
+            break;
+        case 'get_results':
+            res.setHeader('Content-Type', 'application/json');
+            var name = req.query.name;
+            db.results.findOne({name:name}, function(err, result){
+                if (!err && result) {
+                    res.send({status:'success', result:result.log});
+                    res.end();
+                }
+                else {
+                    res.send({status:'failed', result:null});
+                    res.end();
+                }
+            });
             break;
         default:
             if (next) {
@@ -287,4 +327,12 @@ function is_valid_token(data) {
         return false;
     }
     return true;
+}
+
+
+function run_auto_quiet(name) {
+    var exec = require('child_process').exec;
+    var cmd = 'firefox http://localhost:3000/run_auto?name='+name;
+    exec(cmd, function(error, stdout, stderr) {
+    });
 }

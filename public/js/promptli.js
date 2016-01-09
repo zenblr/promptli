@@ -410,8 +410,8 @@ $(document).ready(function() {
            $(this).find('.pin').text('U');
        }
     });
-    if ((typeof(run_auto) != 'undefined') && (run_auto)) {
-        auto();
+    if (typeof(run_auto) != 'undefined') {
+        auto(run_auto);
     }
     else {
         showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
@@ -523,7 +523,7 @@ function logMsg(type, str) {
             break;
         case "START":
             addEmptyLine();
-            str = str;
+            str = '[INFO] '+str;
             break;
         case "CONTINUE":
             break;
@@ -1152,7 +1152,8 @@ function fixArgumentReferences(str, ver) {
     return str;
 }
 
-function auto() {
+function auto(name) {
+    //$('.clear-transcript').trigger("click");
     $('.version').val('a');
     $('.version').trigger("change");
     var all_scripts = [];
@@ -1161,17 +1162,33 @@ function auto() {
             resp.scripts.forEach(function (s) {
                 all_scripts.push(s.name);
             });
-            run_all_scripts(all_scripts);
+            run_all_scripts(all_scripts, function() {
+                var log = $("#log").text();
+                log = formatResults(log);
+                $.post("/save_results", {name:name, log:log}, function(res) {
+                    if (res.status == "success") {
+                        logMsg("INFO", "Results of test '"+name+"' saved.");
+                    }
+                    else {
+                        logMsg("ERROR", "Results of test '"+name+"' could not be saved.");
+                    }
+                }, "json");
+            });
         }
     });
 }
 
-function run_all_scripts(scripts) {
+function run_all_scripts(scripts, cb) {
     if (scripts.length == 0) {
+        cb && (typeof(cb) == "function") && cb();
         return;
     }
     var name = scripts.pop();
     getAndRunScript(name, function() {
-        run_all_scripts(scripts);
+        run_all_scripts(scripts, cb);
     });
+}
+
+function formatResults(log) {
+    return log.replace(/(\[.*?\])/g, "<br>$1");
 }

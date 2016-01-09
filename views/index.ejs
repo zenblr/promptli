@@ -167,9 +167,9 @@
         APP.SDK.cloneInto(sdk['v1'].sdk);
         sdk['v1'].sdk.APP.SDK._version = 'v1';
     </script>
-    <% if ((typeof(run_auto) != "undefined") && (run_auto)) { %>
+    <% if (typeof(run_auto) != "undefined") { %>
     <script>
-        var run_auto = true;
+        var run_auto = "<%=run_auto%>";
     </script>
     <% } %>
   </body>
