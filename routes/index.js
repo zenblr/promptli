@@ -11,7 +11,7 @@ var oneHour = 1 * 60 * 60 * 1000;
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+  res.render('index', { title: 'Express', testconfig:config.tests });
 });
 
 router.post('/:ask', function(req, res, next) {
@@ -194,7 +194,7 @@ router.get('/:ask', function(req, res, next) {
                 });
                 return;
             }
-            res.render('index', { title: 'Express', run_auto:name });
+            res.render('index', { title: 'Express', run_auto:name, testconfig:config.tests });
             break;
         case 'get_results':
             res.setHeader('Content-Type', 'application/json');

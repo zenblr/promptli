@@ -13,7 +13,8 @@
 
     <!-- Bootstrap core CSS -->
     <link href="/css/bootstrap.min.css" rel="stylesheet">
-      <link href="/css/colorbox.css" rel="stylesheet">
+    <link href="/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="/css/colorbox.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
     <link href="/css/promptli.css" rel="stylesheet">
@@ -28,7 +29,6 @@
   <body>
 
     <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="sr-only">Toggle navigation</span>
@@ -45,7 +45,6 @@
             <li><a href="#contact">Contact</a></li>
           </ul>
         </div><!--/.nav-collapse -->
-      </div>
     </nav>
 
     <div class="container">
@@ -172,5 +171,8 @@
         var run_auto = "<%=run_auto%>";
     </script>
     <% } %>
+    <script>
+        var testconfig = JSON.parse('<%-JSON.stringify(testconfig)%>');
+    </script>
   </body>
 </html>

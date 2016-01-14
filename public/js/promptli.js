@@ -881,10 +881,12 @@ function evaluateResults(results) {
                         }
                     }
                     else if (Array.isArray(results[0].r) && Array.isArray(results[i].r)) {
-                        passed = results[0].r.length == results[i].r.length;
-                        if (!passed) {
-                            message += "Returned array length from version "+results[0].v+" is "+results[0].r.length+" and from version "+results[i].v+" is "+results[i].r.length;
-                            break;
+                        if (testconfig.check_array_length) {
+                            passed = results[0].r.length == results[i].r.length;
+                            if (!passed) {
+                                message += "Returned array length from version "+results[0].v+" is "+results[0].r.length+" and from version "+results[i].v+" is "+results[i].r.length;
+                                break;
+                            }
                         }
                     }
                     else if (typeof(results[0].r) == "object") {
