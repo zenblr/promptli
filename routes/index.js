@@ -134,6 +134,16 @@ router.post('/:ask', function(req, res, next) {
               res.end();
           });
           break;
+      case 'update_config':
+          res.setHeader('Content-Type', 'application/json');
+          for (var n in req.body) {
+              if (req.body.hasOwnProperty(n)) {
+                  config.tests[n] = req.body[n];
+              };
+          }
+          res.send({status:'success', testconfig:config.tests});
+          res.end();
+          break;
       default:
             if (next) {
                 var err = new Error('Not Found');

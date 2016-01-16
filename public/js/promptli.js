@@ -417,6 +417,29 @@ $(document).ready(function() {
         showPopup($('<p>Please select version of system to test, or choose regression mode, before any other action.</p>'));
     }
 
+    $('.configure-tests').click(function(e)  {
+        e.preventDefault();
+        var ele = $('form.form-configure-tests').parent().clone();
+        for (var name in testconfig) {
+            if (testconfig.hasOwnProperty(name)) {
+                var val = testconfig[name];
+                ele.find('input[name='+name+'][value="'+val+'"]').prop('checked',true);
+            }
+            ele.find('button').click(function(e) {
+                e.preventDefault();
+                hidePopup();
+                $.post('/update_config', ele.find('form.form-configure-tests').serialize(),function(res) {
+                    if (res.status=="success") {
+                        testconfig = res.testconfig;
+                    }
+                    else {
+                        showPopup('<p>Configuration update failed</p>');
+                    }
+                }, "json");
+            });
+        }
+        showPopup(ele, {width:700});
+    });
 
 });
 
@@ -881,7 +904,7 @@ function evaluateResults(results) {
                         }
                     }
                     else if (Array.isArray(results[0].r) && Array.isArray(results[i].r)) {
-                        if (testconfig.check_array_length) {
+                        if (testconfig.check_array_length == 'yes') {
                             passed = results[0].r.length == results[i].r.length;
                             if (!passed) {
                                 message += "Returned array length from version "+results[0].v+" is "+results[0].r.length+" and from version "+results[i].v+" is "+results[i].r.length;

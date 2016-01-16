@@ -40,9 +40,22 @@
         </div>
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#contact">Contact</a></li>
+            <li><a href="#" class="configure-tests">Configuration</a></li>
+            <!--<li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>-->
+              <!--<li class="dropdown">
+                  <a href="#" data-toggle="dropdown" class="dropdown-toggle configure-tests">Configure</a>
+                  <ul class="dropdown-menu" style="width:500px;">
+                      <form>
+                          <div class="form-group">
+                              When comparing results, check array lengths are the same:<br>
+                              <input type="radio" name="array_length_check" value="yes"> Yes<br>
+                              <input type="radio" name="array_length_check" value="no"> No<br>
+                          </div>
+                          <button type="submit" class="btn btn-primary">Update</button>
+                      </form>
+                  </ul>
+              </li>-->
           </ul>
         </div><!--/.nav-collapse -->
     </nav>
@@ -141,6 +154,16 @@
         <div class="recorded-results">
             <ul>
             </ul>
+        </div>
+        <div>
+            <form class="form-configure-tests">
+                When comparing results, check array lengths are the same:
+                <input type="radio" name="check_array_length" value="yes"> Yes
+                <input type="radio" name="check_array_length" value="no"> No
+                <div style="width:50%;margin:auto;margin-top:10px;">
+                    <button type="submit" class="btn btn-primary update-test-config">Update</button>
+                </div>
+            </form>
         </div>
     </div>
 
