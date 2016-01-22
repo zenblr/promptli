@@ -1,5 +1,5 @@
 var config = {};
-config.env    = "development";
+config.env    = "production";
 config.tests   = {'check_array_length':'yes'};
 module.exports = config;
 
