@@ -392,8 +392,12 @@ var loader = function (ctx) {
 						!!cfg.client_token ? {headers: {
 												Authorization : "Bearer " + cfg.client_token
 												}
-											} : {}
-						));
+											} : {},
+						{headers: {
+							"X-Timeli-Version" : "1.0"
+						}}
+
+				));
 			},
 			getPaging = function(data, lcfg) {
 				var ctx = this;
