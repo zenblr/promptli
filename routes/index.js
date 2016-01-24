@@ -293,7 +293,7 @@ function authenticateClient(version, cb) {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': Buffer.byteLength(data),
                 'Accept': "application/json; charset=utf-8",
-                "X-Timeli-Version": (version == "v2" ? "2.0" : "other")
+                "X-Timeli-Version": (version == "v2" ? "2.0" : "1.0")
             }
         };
 
